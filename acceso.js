@@ -5,6 +5,7 @@
 "use strict";
 const SUPABASE_URL="https://mmmoczqrhczbwpuniwhl.supabase.co";
 const SUPABASE_KEY="sb_publishable_ms4-fK5dTOmzYsSc2OSaug_Entkniww"; // llave pública: no da acceso sin usuario
+const DOMINIO="@panel.sigasa.com.mx";
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
 const $=s=>document.getElementById(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -19,9 +20,11 @@ function mostrarAcceso(msg){
 async function entrar(e){
   e.preventDefault();
   const b=$("aentrar"); b.disabled=true; b.textContent="Entrando…"; $("aerror").hidden=true;
-  const {error}=await sb.auth.signInWithPassword({email:$("acorreo").value.trim(),password:$("aclave").value});
+  // Usuario sin correo: "apech" → apech@panel.sigasa.com.mx (dirección interna, no recibe correos)
+  let u=$("acorreo").value.trim().toLowerCase(); if(u&&!u.includes("@")) u+=DOMINIO;
+  const {error}=await sb.auth.signInWithPassword({email:u,password:$("aclave").value});
   b.disabled=false; b.textContent="Entrar";
-  if(error){mostrarAcceso(/invalid/i.test(error.message)?"Correo o contraseña incorrectos.":error.message);return}
+  if(error){mostrarAcceso(/invalid/i.test(error.message)?"Usuario o contraseña incorrectos.":error.message);return}
   location.reload();
 }
 async function salir(){await sb.auth.signOut();location.reload()}
