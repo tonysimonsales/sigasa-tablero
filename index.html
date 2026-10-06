@@ -473,8 +473,11 @@ function pintarTabla(){
   const d=DIMS.find(x=>x.k===st.dim), ok1=R.disp[1].completo, ok2=R.disp[2].completo;
   let filas=[...R.grp].map(([g,v])=>({g,n:nombre(st.dim,g),c:clave(st.dim,g),a:v[0]/100,b:v[1]/100,c2:v[2]/100}));
   if(st.buscar) filas=filas.filter(f=>(f.n+" "+f.c).toLowerCase().includes(st.buscar));
-  const o=st.orden, val=f=>o.col==="n"?f.n:o.col==="pb"?(f.b?(f.a-f.b)/Math.abs(f.b):-1e9):o.col==="pc"?(f.c2?(f.a-f.c2)/Math.abs(f.c2):-1e9):f[o.col];
-  filas.sort((x,y)=>{const a=val(x),b=val(y);return (typeof a==="string"?a.localeCompare(b,"es"):a-b)*o.dir});
+  // Var.: sin comparación ("—") siempre al final, en ambos sentidos
+  const o=st.orden, val=f=>o.col==="n"?f.n:o.col==="pb"?(ok1&&f.b?(f.a-f.b)/Math.abs(f.b):null):o.col==="pc"?(ok2&&f.c2?(f.a-f.c2)/Math.abs(f.c2):null):f[o.col];
+  filas.sort((x,y)=>{const a=val(x),b=val(y);
+    if(a===null||b===null) return a===b?y.a-x.a:a===null?1:-1;
+    return (typeof a==="string"?a.localeCompare(b,"es"):(a-b)||(y.a-x.a)*o.dir)*o.dir});
   const total=R.tot[0]||1, maxA=Math.max(1,...filas.slice(0,st.limite).map(f=>Math.abs(f.a)));
   const h=(col,t)=>'<th data-col="'+col+'" aria-sort="'+(o.col===col?(o.dir<0?"descending":"ascending"):"none")+'">'+t+(o.col===col?(o.dir<0?" ↓":" ↑"):"")+"</th>";
   const tb=$("tabla");
@@ -669,8 +672,10 @@ function pintarAntiguedad(){
 function pintarTabla(){
   const d=DIMS.find(x=>x.k===st.dim), o=st.orden;
   let filas=R.filas; if(st.buscar) filas=filas.filter(f=>f.n.toLowerCase().includes(st.buscar));
-  const val=f=>o.col==="n"?f.n:(f[o.col]==null?-1e15:f[o.col]);
-  filas=filas.slice().sort((x,y)=>{const a=val(x),b=val(y);return (typeof a==="string"?a.localeCompare(b,"es"):a-b)*o.dir});
+  const val=f=>o.col==="n"?f.n:(f[o.col]==null||!isFinite(f[o.col])?null:f[o.col]);
+  filas=filas.slice().sort((x,y)=>{const a=val(x),b=val(y);
+    if(a===null||b===null) return a===b?0:a===null?1:-1; // sin dato siempre al final
+    return (typeof a==="string"?a.localeCompare(b,"es"):a-b)*o.dir});
   const cols=[["n",d.t],["sf","Saldo al cierre"],["prom","Saldo promedio"],["vn","Ventas netas"],["rot","Rotación"],["rec","Recuperación"],["real","Días reales"],["venc","Vencido al corte"]];
   const tb=$("ctabla");
   tb.tHead.innerHTML="<tr>"+cols.map(([c,t])=>'<th data-col="'+c+'" aria-sort="'+(o.col===c?(o.dir<0?"descending":"ascending"):"none")+'">'+t+(o.col===c?(o.dir<0?" ↓":" ↑"):"")+"</th>").join("")+"</tr>";
