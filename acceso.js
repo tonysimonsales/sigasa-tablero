@@ -21,7 +21,7 @@ async function entrar(e){
   e.preventDefault();
   const b=$("aentrar"); b.disabled=true; b.textContent="Entrando…"; $("aerror").hidden=true;
   // Usuario sin correo: "apech" → apech@panel.sigasa.com.mx (dirección interna, no recibe correos)
-  let u=$("acorreo").value.trim().toLowerCase(); if(u&&!u.includes("@")) u+=DOMINIO;
+  let u=$("acorreo").value.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g,""); if(u&&!u.includes("@")) u+=DOMINIO;
   const {error}=await sb.auth.signInWithPassword({email:u,password:$("aclave").value});
   b.disabled=false; b.textContent="Entrar";
   if(error){mostrarAcceso(/invalid/i.test(error.message)?"Usuario o contraseña incorrectos.":error.message);return}
