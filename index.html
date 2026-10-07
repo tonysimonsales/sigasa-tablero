@@ -158,6 +158,43 @@ tfoot td:first-child{background:var(--surface-2)}
 .antres b{color:var(--ink);font-family:var(--f-num);font-weight:500}
 @media (max-width:720px){.cresumen{grid-template-columns:1fr 1fr}.ant .r{grid-template-columns:70px 1fr 112px}.ant .r .vl small{display:none}}
 @media (prefers-reduced-motion:no-preference){.barra b{transition:width .25s}}
+/* Visitas */
+#rplan{width:100%;max-width:100%;text-overflow:ellipsis}
+.rdias{display:none;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:6px}
+.rdias button{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:6px 12px;min-height:36px;cursor:pointer;white-space:nowrap;color:var(--ink-2)}
+.rdias button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.cal{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.dia{min-width:0;display:flex;flex-direction:column;gap:6px}
+.dia h3{margin:0;font-family:var(--f-display);font-size:1rem;font-weight:600;display:flex;justify-content:space-between;align-items:baseline;gap:6px;padding:4px 2px;border-bottom:2px solid var(--line)}
+.dia h3 small{font-family:var(--f-body);font-weight:500;color:var(--ink-3);font-size:.78rem}
+.dia.hoy h3{border-bottom-color:var(--accent)}
+.vis{display:grid;grid-template-columns:22px 1fr;gap:2px 8px;text-align:left;width:100%;background:var(--surface-2);border:1px solid var(--line-soft);border-left:3px solid var(--line);border-radius:var(--r);padding:7px 8px;cursor:pointer;min-width:0}
+.vis:hover{border-color:var(--line)}
+.vis .o{grid-row:span 2;font-family:var(--f-num);font-size:.8rem;color:var(--ink-3);padding-top:1px}
+.vis .nm{font-weight:600;font-size:.88rem;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.vis .dt{font-size:.76rem;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:2px 8px}
+.vis .dt b{font-family:var(--f-num);font-weight:500;color:var(--ink-2)}
+.vis .dt .rojo{color:var(--bad)}
+.vis.e-F{border-left-color:var(--good)} .vis.e-I{border-left-color:var(--bad)} .vis.e-L{border-left-color:var(--ink-3)} .vis.e-P{border-left-color:var(--s1)}
+.est{display:inline-block;font-size:.7rem;font-weight:600;letter-spacing:.03em;border-radius:999px;padding:1px 7px;border:1px solid currentColor}
+.est.e-F{color:var(--good)} .est.e-I{color:var(--bad)} .est.e-L{color:var(--ink-3)} .est.e-P{color:var(--s1)}
+.vacio{color:var(--ink-3);font-size:.85rem;padding:8px 2px}
+.ficha{width:min(720px,100%)}
+.ficha .cuerpo{overflow:auto;padding:14px;display:grid;gap:14px}
+.ficha .sub2{color:var(--ink-2);font-size:.86rem}
+.mini{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.mini .cifra{padding:9px 11px}
+.mini .cifra .m{font-size:1.1rem}
+.ficha h4{margin:0 0 6px;font-family:var(--f-display);font-size:1rem;font-weight:600}
+.ficha .lst{display:grid;gap:4px;font-size:.84rem}
+.ficha .lst .r{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line-soft);padding:4px 0}
+.ficha .lst .r span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.ficha .lst .r .num{white-space:nowrap}
+.ficha .acc{display:flex;gap:8px;flex-wrap:wrap}
+.ficha .acc .prim,.ficha .acc .btn{flex:1 1 160px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:var(--r);z-index:30;font-size:.9rem;max-width:calc(100% - 32px)}
+@media (max-width:720px){.rdias{display:flex}.cal{grid-template-columns:1fr}.cal .dia:not(.sel){display:none}}
+
 </style>
 
 <style>
@@ -190,6 +227,7 @@ tfoot td:first-child{background:var(--surface-2)}
   <nav class="tabs" role="tablist" aria-label="Secciones">
     <button type="button" role="tab" id="tabV" aria-selected="true" aria-controls="pVentas">Ventas</button>
     <button type="button" role="tab" id="tabC" aria-selected="false" aria-controls="pCobranza">Cobranza</button>
+    <button type="button" role="tab" id="tabR" aria-selected="false" aria-controls="pVisitas">Visitas</button>
   </nav>
   <div id="pVentas" class="pestana" role="tabpanel" aria-labelledby="tabV">
 
@@ -253,8 +291,22 @@ tfoot td:first-child{background:var(--surface-2)}
       <p class="aviso">Toca un renglón para filtrar por él. Saldo promedio: promedio del saldo de cada día. Ventas netas sin IVA menos devoluciones. Rotación = ventas netas ÷ saldo promedio. Recuperación = días del periodo ÷ rotación. Días reales: días entre factura y pago, ponderados por importe.</p>
     </section>
   </div>
+  <div id="pVisitas" class="pestana" role="tabpanel" aria-labelledby="tabR" hidden>
+    <section class="panel controles" aria-label="Plan de visitas">
+      <div class="fila">
+        <div class="campo" style="flex:1 1 280px"><label class="etq" for="rplan">Plan de visitas</label><select id="rplan"></select></div>
+      </div>
+    </section>
+    <section class="cresumen" id="rresumen" aria-live="polite"><div class="cargando">Cargando planes de visitas…</div></section>
+    <section class="panel">
+      <div class="rdias" id="rdias" role="group" aria-label="Día"></div>
+      <div class="cal" id="rcal"></div>
+      <p class="aviso">Toca un cliente para ver el resumen de su cuenta. Número = orden de visita del día.</p>
+    </section>
+  </div>
 </div>
 <div id="velo" class="velo" hidden></div>
+<div id="aviso" class="toast" role="status" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="acceso.js"></script>
@@ -542,7 +594,13 @@ function abrirSelector(d){
 }
 
 let t; window.addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(()=>R&&pintarGrafica(),150)});
-cargar().then(iniciar).catch(e=>{$("corte").textContent=e.message;$("lienzo").innerHTML='<div class="cargando">'+esc(e.message)+"</div>"});
+const listo=cargar().then(iniciar).catch(e=>{$("corte").textContent=e.message;$("lienzo").innerHTML='<div class="cargando">'+esc(e.message)+"</div>"});
+/* Enlace desde otras pestañas: mostrar las ventas de un cliente (id de Microsip) */
+window.PANEL=window.PANEL||{};
+window.PANEL.ventasCliente=async id=>{await listo; if(!C||!C._ids) return false;
+  const i=C._ids.clientes.indexOf(id); if(i<0) return false;
+  for(const d of DIMS) st.f[d.k].clear(); st.f.cliente.add(i); st.dim="grupo"; st.limite=50; st.buscar=""; $("buscar").value="";
+  pintar(); return true};
 })();
 </script>
 <script>
@@ -558,17 +616,25 @@ const dec=(v,n)=>v==null||!isFinite(v)?"—":v.toFixed(n);
 const mesTxt=m=>{const[y,mm]=m.split("-");return MESN[+mm-1]+" "+y};
 
 /* Pestañas */
-const tabs=[["tabV","pVentas"],["tabC","pCobranza"]];
-let cargada=false;
+const tabs=[["tabV","pVentas"],["tabC","pCobranza"],["tabR","pVisitas"]];
+let prom=null; const asegurar=()=>prom||(prom=cargar());
 function mostrar(id){
   for(const [t,p] of tabs){const on=t===id;$(t).setAttribute("aria-selected",on);$(p).hidden=!on}
   try{localStorage.setItem("tablero_pestana",id)}catch(e){}
-  if(id==="tabC"&&!cargada){cargada=true;cargar()}
+  if(id==="tabC") asegurar();
+  if(id==="tabR"&&window.PANEL.visitas) window.PANEL.visitas();
+  window.scrollTo({top:0});
 }
-$("tabV").onclick=()=>mostrar("tabV"); $("tabC").onclick=()=>mostrar("tabC");
+window.PANEL=window.PANEL||{}; window.PANEL.mostrar=mostrar;
+window.PANEL.cobranzaCliente=async id=>{await asegurar(); if(!C) return false;
+  const i=C.clientes.findIndex(f=>f.id===id); if(i<0) return false;
+  for(const d of DIMS) st.f[d.k].clear(); st.f.cliente.add(i); st.dim="cliente"; st.limite=50; st.buscar=""; $("cbuscar").value="";
+  pintar(); return true};
+for(const [t] of tabs) $(t).onclick=()=>mostrar(t);
 let ini="tabV"; try{ini=localStorage.getItem("tablero_pestana")||"tabV"}catch(e){}
-if(location.hash==="#cobranza") ini="tabC";
-mostrar(ini==="tabC"?"tabC":"tabV");
+if(location.hash==="#cobranza") ini="tabC"; if(location.hash==="#visitas") ini="tabR";
+const arranque=()=>mostrar(tabs.some(t=>t[0]===ini)?ini:"tabV");
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",arranque); else setTimeout(arranque,0);
 
 let C=null;
 const st={per:"A",f:{cobrador:new Set(),zona:new Set(),cliente:new Set()},dim:"cobrador",orden:{col:"sf",dir:-1},limite:50,buscar:""};
@@ -730,5 +796,131 @@ function selector(d){
   $("cflimpiar").onclick=()=>{sel.clear();pintarL()};
   $("cfaplicar").onclick=()=>{st.f[d.k]=sel;cerrar();pintar()};
 }
+})();
+</script>
+<script>
+(function(){
+"use strict";
+/* Pestaña Visitas: calendario del plan de visitas y resumen de cada cliente */
+const MESN=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const DIAS=["dom","lun","mar","mié","jue","vie","sáb"];
+const $=s=>document.getElementById(s);
+const fmt=new Intl.NumberFormat("es-MX",{maximumFractionDigits:0});
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const dinero=v=>v==null?"—":(v<0?"−$":"$")+fmt.format(Math.abs(Math.round(v)));
+const F=s=>{const[y,m,d]=s.slice(0,10).split("-").map(Number);return new Date(y,m-1,d)};
+const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const fCorta=s=>{if(!s)return"—";const d=F(s);return d.getDate()+" "+MESN[d.getMonth()]+(d.getFullYear()!==new Date().getFullYear()?" "+d.getFullYear():"")};
+// Estatus de visita en Microsip en Ruta (P = sin registro todavía)
+const EST={F:"Con pedido",I:"No efectiva",L:"Sin pedido",N:"Sin registro",P:"Pendiente"};
+let D=null, prom=null, plan=null, diaSel=null;
+
+async function cargar(){
+  if(window.FUENTE) D=await window.FUENTE.visitas();
+  else{const r=await fetch("visitas.json"); if(!r.ok) throw new Error("No se pudieron cargar los planes de visitas."); D=await r.json();}
+  iniciar();
+}
+window.PANEL=window.PANEL||{};
+window.PANEL.visitas=()=>prom||(prom=cargar().catch(e=>{$("rresumen").innerHTML='<div class="cargando">'+esc(e.message)+"</div>"}));
+
+function iniciar(){
+  const sel=$("rplan");
+  if(!D.planes.length){$("rresumen").innerHTML='<div class="cargando">No hay planes de visitas para mostrar.</div>';sel.disabled=true;return}
+  const ord=D.planes.map((p,i)=>i).sort((a,b)=>D.planes[b].i.localeCompare(D.planes[a].i)||D.planes[a].agn.localeCompare(D.planes[b].agn,"es"));
+  const varios=new Set(D.planes.map(p=>p.ag)).size>1;
+  sel.innerHTML=ord.map(i=>{const p=D.planes[i];return '<option value="'+i+'">'+esc(p.n)+" · "+fCorta(p.i)+" al "+fCorta(p.f)+(varios?" · "+esc(p.agn):"")+"</option>"}).join("");
+  // Plan por omisión: el que incluye hoy; si no, el próximo; si no, el más reciente
+  const hoy=iso(new Date());
+  let def=ord.find(i=>D.planes[i].i<=hoy&&D.planes[i].f>=hoy);
+  if(def==null){const fut=ord.filter(i=>D.planes[i].i>hoy); def=fut.length?fut[fut.length-1]:ord[0]}
+  sel.value=def; sel.onchange=e=>{elegir(+e.target.value)}; elegir(def);
+}
+function diasPlan(p){
+  const out=[], fin=F(p.f); for(let d=F(p.i);d<=fin;d.setDate(d.getDate()+1)) out.push(iso(d));
+  for(const v of p.v) if(!out.includes(v[1])) out.push(v[1]);
+  return out.sort().filter(d=>F(d).getDay()!==0||p.v.some(v=>v[1]===d));
+}
+function elegir(i){
+  plan=D.planes[i]; const dias=diasPlan(plan), hoy=iso(new Date());
+  diaSel=dias.includes(hoy)?hoy:(dias.find(d=>plan.v.some(v=>v[1]===d))||dias[0]);
+  pintarResumen(); pintarDias(dias); pintarCal(dias);
+}
+function pintarResumen(){
+  const v=plan.v, n=v.length, c=k=>v.filter(x=>x[3]===k).length, ped=v.reduce((s,x)=>s+(x[6]||0),0);
+  const cl=new Set(v.map(x=>x[0])), saldo=[...cl].reduce((s,k)=>s+(D.clientes[k].sf||0),0);
+  const venc=[...cl].reduce((s,k)=>{const t=D.clientes[k].t;return s+(t?t.slice(1).reduce((a,b)=>a+b,0):0)},0);
+  const tiles=[["Visitas planeadas",fmt.format(n),cl.size+" clientes · "+esc(plan.agn)],
+    ["Con pedido",fmt.format(c("F")),n?(c("F")/n*100).toFixed(0)+"% del plan":""],
+    ["Pendientes",fmt.format(c("P")),(c("L")+c("I")+c("N"))+" sin pedido o no efectivas"],
+    ["Pedidos del plan",dinero(ped),"suma de pedidos registrados en las visitas"],
+    ["Saldo de los clientes",dinero(saldo),"al "+fCorta(D.corte)],
+    ["Vencido",dinero(venc),saldo?(venc/saldo*100).toFixed(1)+"% del saldo":""]];
+  $("rresumen").innerHTML=tiles.map(([k,m,r])=>'<div class="cifra"><div class="k">'+k+'</div><div class="m">'+m+'</div><div class="ref">'+r+"</div></div>").join("");
+}
+function pintarDias(dias){
+  const b=$("rdias");
+  b.innerHTML=dias.map(d=>{const x=F(d),n=plan.v.filter(v=>v[1]===d).length;
+    return '<button type="button" data-d="'+d+'" aria-pressed="'+(d===diaSel)+'">'+DIAS[x.getDay()]+" "+x.getDate()+(n?" · "+n:"")+"</button>"}).join("");
+  b.querySelectorAll("button").forEach(x=>x.onclick=()=>{diaSel=x.dataset.d;pintarDias(dias);
+    document.querySelectorAll("#rcal .dia").forEach(e=>e.classList.toggle("sel",e.dataset.d===diaSel))});
+  const s=b.querySelector('[aria-pressed="true"]'); if(s) s.scrollIntoView({inline:"center",block:"nearest"});
+}
+function pintarCal(dias){
+  const hoy=iso(new Date());
+  $("rcal").innerHTML=dias.map(d=>{const x=F(d), vs=plan.v.filter(v=>v[1]===d).sort((a,b)=>a[2]-b[2]);
+    return '<div class="dia'+(d===hoy?" hoy":"")+(d===diaSel?" sel":"")+'" data-d="'+d+'"><h3>'+DIAS[x.getDay()]+" "+x.getDate()+" "+MESN[x.getMonth()]+"<small>"+(vs.length?vs.length+" visitas":"")+"</small></h3>"+
+      (vs.map((v,n)=>{const c=D.clientes[v[0]], t=c.t, ven=t?t.slice(1).reduce((a,b)=>a+b,0):0;
+        return '<button type="button" class="vis e-'+v[3]+'" data-k="'+plan.v.indexOf(v)+'"><span class="o">'+(n+1)+'</span><span class="nm">'+esc(c.n)+"</span>"+
+          '<span class="dt"><span class="est e-'+v[3]+'">'+EST[v[3]]+"</span>"+(v[6]?"<span>Pedido <b>"+dinero(v[6])+"</b></span>":"")+
+          (c.sf?"<span>Saldo <b>"+dinero(c.sf)+"</b></span>":"")+(ven>1?'<span class="rojo">Vencido <b class="rojo">'+dinero(ven)+"</b></span>":"")+"</span></button>"}).join("")||'<div class="vacio">Sin visitas</div>')+"</div>"}).join("");
+  $("rcal").querySelectorAll(".vis").forEach(b=>b.onclick=()=>ficha(plan.v[+b.dataset.k]));
+}
+
+/* Resumen de la cuenta del cliente */
+function ficha(v){
+  const c=D.clientes[v[0]], t=c.t||[], venc=t.slice(1).reduce((a,b)=>a+b,0), M=D.meses;
+  const v12=c.vm.slice(12).reduce((a,b)=>a+b,0), v12a=c.vm.slice(0,12).reduce((a,b)=>a+b,0);
+  const meses12=c.vm.slice(12).filter(x=>x>0.5).length;
+  const dUlt=c.uc?Math.round((F(D.corte)-F(c.uc))/864e5):null;
+  const pct=(a,b)=>b?((a-b)/Math.abs(b)*100):null;
+  const p12=pct(v12,v12a);
+  const cif=(k,m,r)=>'<div class="cifra"><div class="k">'+k+'</div><div class="m">'+m+'</div><div class="ref">'+(r||"")+"</div></div>";
+  // Antigüedad agrupada a partir de los tramos de 7 días
+  const g=[["Por vencer",0,0],["1–28 días",1,4],["29–63 días",5,9],["64–90 días",10,10],["91–180 días",11,11],["Más de 180",12,12]]
+    .map(([n,a,b])=>[n,t.slice(a,b+1).reduce((x,y)=>x+y,0)]);
+  const mx=Math.max(1,...c.vm.slice(12).map(Math.abs));
+  const W=360,H=90,bw=W/12;
+  const graf='<svg viewBox="0 0 '+W+" "+(H+16)+'" width="100%" role="img" aria-label="Ventas netas de los últimos 12 meses">'+
+    c.vm.slice(12).map((x,i)=>{const h=Math.max(0,x)/mx*H;return '<rect x="'+(i*bw+3)+'" y="'+(H-h)+'" width="'+(bw-6)+'" height="'+h+'" rx="2" fill="var(--s1)"><title>'+M[12+i]+": "+dinero(x)+"</title></rect>"+
+      '<text x="'+(i*bw+bw/2)+'" y="'+(H+12)+'" text-anchor="middle" font-size="9">'+MESN[+M[12+i].slice(5)-1]+"</text>"}).join("")+"</svg>";
+  const velo=$("velo");
+  velo.innerHTML='<div class="hoja ficha" role="dialog" aria-modal="true" aria-label="Resumen del cliente"><header><div style="min-width:0"><h3 style="overflow:hidden;text-overflow:ellipsis">'+esc(c.n)+'</h3>'+
+    '<div class="sub2">'+[c.z,c.ve&&"Vendedor: "+c.ve,c.co&&"Cobrador: "+c.co].filter(Boolean).map(esc).join(" · ")+"</div></div>"+
+    '<button type="button" class="link" id="fcerrar">Cerrar</button></header><div class="cuerpo">'+
+    '<div class="sub2">Visita del '+fCorta(v[1])+" · visita "+(plan.v.filter(x=>x[1]===v[1]).sort((a,b)=>a[2]-b[2]).indexOf(v)+1)+" del día"+' · <span class="est e-'+v[3]+'">'+EST[v[3]]+"</span>"+
+      (v[5]&&v[3]!=="P"?" · registrada "+esc(v[5].slice(0,10)===v[1]?v[5].slice(11):fCorta(v[5])+" "+v[5].slice(11))+"":"")+(v[6]?" · pedido "+dinero(v[6]):"")+(v[4]&&D.razones[v[4]]?" · "+esc(D.razones[v[4]]):"")+(v[8]?" · “"+esc(v[8])+"”":"")+"</div>"+
+    '<div class="mini">'+
+      cif("Saldo",dinero(c.sf),c.lc?"Límite "+dinero(c.lc)+" · disponible "+dinero(c.lc-c.sf):"Sin límite de crédito")+
+      cif("Vencido",'<span style="color:'+(venc>1?"var(--bad)":"inherit")+'">'+dinero(venc)+"</span>",c.sf?(venc/c.sf*100).toFixed(0)+"% del saldo":"")+
+      cif("Última compra",c.uc?fCorta(c.uc):"—",c.uc?dinero(c.ui)+" · hace "+dUlt+" días":"sin compras registradas")+
+      cif("Ventas 12 meses",dinero(v12),(p12==null?"":'<span class="var '+(p12>=0?"up":"down")+'">'+(p12>=0?"▲ +":"▼ ")+p12.toFixed(1)+"%</span> vs 12 meses previos"))+
+      cif("Promedio mensual",dinero(v12/12),"compró en "+meses12+" de 12 meses")+
+      cif("Días reales de pago",c.dp!=null?c.dp.toFixed(1)+" días":"—","de factura a pago, últimos 12 meses")+
+    "</div>"+
+    "<div><h4>Ventas netas por mes</h4>"+graf+"</div>"+
+    (c.sf||venc?"<div><h4>Antigüedad del saldo</h4><div class=\"lst\">"+g.filter(x=>Math.abs(x[1])>0.5).map(([n,x])=>'<div class="r"><span>'+n+'</span><span class="num">'+dinero(x)+"</span></div>").join("")+"</div></div>":"")+
+    (c.gr.length?"<div><h4>Lo que más compra (12 meses)</h4><div class=\"lst\">"+c.gr.map(([n,x])=>'<div class="r"><span>'+esc(n)+'</span><span class="num">'+dinero(x)+"</span></div>").join("")+"</div></div>":"")+
+    (c.hv.length?"<div><h4>Últimas visitas</h4><div class=\"lst\">"+c.hv.map(h=>'<div class="r"><span>'+fCorta(h[0])+" "+esc(h[0].slice(11))+" · "+esc(h[1].split(" ").slice(0,2).join(" "))+(h[3]?" · "+esc(h[3]):"")+(h[5]?" · “"+esc(h[5])+"”":"")+'</span><span class="num">'+(h[4]?dinero(h[4]):'<span class="est e-'+h[2]+'">'+(EST[h[2]]||h[2])+"</span>")+"</span></div>").join("")+"</div></div>":"")+
+    '<div class="acc"><button type="button" class="prim" id="fventas">Ver en Ventas</button><button type="button" class="btn" id="fcobranza">Ver en Cobranza</button></div>'+
+    "</div></div>";
+  velo.hidden=false;
+  const cerrar=()=>{velo.hidden=true;velo.innerHTML=""};
+  $("fcerrar").onclick=cerrar; velo.onclick=e=>{if(e.target===velo)cerrar()};
+  const ir=async(tab,fn,msg)=>{cerrar(); window.PANEL.mostrar(tab); const ok=await window.PANEL[fn](c.id); if(!ok) aviso(msg)};
+  $("fventas").onclick=()=>ir("tabV","ventasCliente","Este cliente no tiene ventas en tu panel de los últimos meses.");
+  $("fcobranza").onclick=()=>ir("tabC","cobranzaCliente","Este cliente no tiene saldo ni movimientos de cobranza en tu panel.");
+}
+let tAviso; function aviso(m){const a=$("aviso");a.textContent=m;a.hidden=false;clearTimeout(tAviso);tAviso=setTimeout(()=>a.hidden=true,3500)}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("velo").hidden){$("velo").hidden=true;$("velo").innerHTML=""}});
 })();
 </script>

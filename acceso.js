@@ -46,13 +46,14 @@ async function arrancar(){
 }
 
 /* ---------- Descarga y descompresión de paquetes ---------- */
+const PREF={ventas:"v",cobranza:"c",visitas:"r"};
 async function bajar(tipo){
-  const p=await perfil, todos=p.rol==="admin"||p.rol==="supervisor";
+  const p=await perfil, todos=p.rol==="admin"||p.rol==="supervisor", t=PREF[tipo]+":todos";
   let q=sb.from("paquetes").select("clave,contenido").eq("tipo",tipo);
-  q=todos?q.eq("clave",tipo[0]+":todos"):q.neq("clave",tipo[0]+":todos");
+  q=todos?q.eq("clave",t):q.neq("clave",t);
   const {data,error}=await q;
   if(error) throw new Error("No se pudieron cargar tus datos: "+error.message);
-  if(!data.length) throw new Error("Tu usuario todavía no tiene "+(tipo==="ventas"?"vendedores":"cobradores")+" asignados.");
+  if(!data.length&&tipo!=="visitas") throw new Error("Tu usuario todavía no tiene "+(tipo==="ventas"?"vendedores":"cobradores")+" asignados.");
   return Promise.all(data.map(r=>abrir(r.contenido)));
 }
 async function abrir(b64){
@@ -75,12 +76,13 @@ function leerVentas(buf){
 }
 function unirVentas(ps){
   const R={generado_hasta:ps.map(p=>p.C.generado_hasta).sort().pop(),
-    meses:[...new Set(ps.flatMap(p=>p.C.meses))].sort(),vendedores:[],zonas:[],clientes:[],grupos:[],lineas:[],articulos:[]};
+    meses:[...new Set(ps.flatMap(p=>p.C.meses))].sort(),vendedores:[],zonas:[],clientes:[],grupos:[],lineas:[],articulos:[],
+    _ids:{vendedores:[],zonas:[],clientes:[],grupos:[],lineas:[],articulos:[]}};
   const im=new Map(R.meses.map((m,i)=>[m,i]));
   const pos={vendedores:new Map(),zonas:new Map(),clientes:new Map(),grupos:new Map(),lineas:new Map(),articulos:new Map()};
   // devuelve el índice global de cada elemento local, agregándolo si es nuevo
   const unir=(p,k,conv)=>p.C[k].map((x,i)=>{const id=p.C._ids[k][i]; let g=pos[k].get(id);
-    if(g===undefined){g=R[k].length;pos[k].set(id,g);R[k].push(conv(x))} return g});
+    if(g===undefined){g=R[k].length;pos[k].set(id,g);R[k].push(conv(x));R._ids[k].push(id)} return g});
   let N=0; const mapas=ps.map(p=>{
     const g=unir(p,"grupos",x=>x), z=unir(p,"zonas",x=>x);
     const l=unir(p,"lineas",x=>[x[0],x[1]<0?-1:g[x[1]]]);
@@ -112,7 +114,20 @@ function unirCobranza(ps){
   return R;
 }
 
+/* ---------- Visitas: unir paquetes ---------- */
+function unirVisitas(ps){
+  const R={corte:"",meses:[],tramos:[],razones:{},planes:[],clientes:[]}, pos=new Map();
+  for(const p of ps){
+    if(p.corte>R.corte){R.corte=p.corte;R.meses=p.meses;R.tramos=p.tramos}
+    Object.assign(R.razones,p.razones);
+    const m=p.clientes.map(c=>{let g=pos.get(c.id); if(g===undefined){g=R.clientes.length;pos.set(c.id,g);R.clientes.push(c)} return g});
+    for(const pl of p.planes) R.planes.push(Object.assign({},pl,{v:pl.v.map(v=>[m[v[0]]].concat(v.slice(1)))}));
+  }
+  return R;
+}
+
 window.FUENTE={
+  visitas:async()=>unirVisitas((await bajar("visitas")).map(b=>JSON.parse(new TextDecoder().decode(b)))),
   ventas:async()=>unirVentas((await bajar("ventas")).map(leerVentas)),
   cobranza:async()=>unirCobranza((await bajar("cobranza")).map(b=>JSON.parse(new TextDecoder().decode(b))))
 };
