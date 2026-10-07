@@ -192,6 +192,14 @@ tfoot td:first-child{background:var(--surface-2)}
 .ficha .lst .r .num{white-space:nowrap}
 .ficha .acc{display:flex;gap:8px;flex-wrap:wrap}
 .ficha .acc .prim,.ficha .acc .btn{flex:1 1 160px}
+.ficha .dos{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ficha h4 small{font-family:var(--f-body);font-weight:500;color:var(--ink-3);font-size:.76rem;margin-left:4px}
+.ficha .lst .r.art{align-items:flex-start}
+.ficha .lst .r.art>span:first-child{white-space:normal;line-height:1.3}
+.ficha .lst .r.art small{display:block;color:var(--ink-3);font-size:.75rem;margin-top:1px}
+.ficha .cl{color:var(--ink-3);font-family:var(--f-num);font-size:.76rem}
+.ficha .rojo{color:var(--bad)}
+@media (max-width:720px){.ficha .dos{grid-template-columns:1fr}}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:var(--r);z-index:30;font-size:.9rem;max-width:calc(100% - 32px)}
 @media (max-width:720px){.rdias{display:flex}.cal{grid-template-columns:1fr}.cal .dia:not(.sel){display:none}}
 
@@ -909,7 +917,12 @@ function ficha(v){
     "</div>"+
     "<div><h4>Ventas netas por mes</h4>"+graf+"</div>"+
     (c.sf||venc?"<div><h4>Antigüedad del saldo</h4><div class=\"lst\">"+g.filter(x=>Math.abs(x[1])>0.5).map(([n,x])=>'<div class="r"><span>'+n+'</span><span class="num">'+dinero(x)+"</span></div>").join("")+"</div></div>":"")+
-    (c.gr.length?"<div><h4>Lo que más compra (12 meses)</h4><div class=\"lst\">"+c.gr.map(([n,x])=>'<div class="r"><span>'+esc(n)+'</span><span class="num">'+dinero(x)+"</span></div>").join("")+"</div></div>":"")+
+    '<div class="dos">'+
+      "<div><h4>Lo que más compra <small>12 meses</small></h4>"+(c.ar&&c.ar.length?'<div class="lst">'+c.ar.map(a=>'<div class="r art"><span><span class="cl">'+esc(a[0])+"</span> "+esc(a[1])+
+        '<small>'+fmt.format(a[3])+" "+esc((a[4]||"").toLowerCase())+(a[5]&&a[5]<D.ventana?' · <span class="rojo">sin compra en '+esc(ventanaTxt())+"</span>":"")+'</small></span><span class="num">'+dinero(a[2])+"</span></div>").join("")+"</div>":'<div class="vacio">Sin compras en 12 meses</div>')+"</div>"+
+      "<div><h4>Sugeridos <small>no comprados en "+esc(ventanaTxt())+"</small></h4>"+(c.su&&c.su.length?'<div class="lst">'+c.su.map(a=>'<div class="r art"><span><span class="cl">'+esc(a[0])+"</span> "+esc(a[1])+
+        "<small>"+esc(a[2])+"</small></span></div>").join("")+"</div>":'<div class="vacio">Sin sugeridos</div>')+"</div>"+
+    "</div>"+
     (c.hv.length?"<div><h4>Últimas visitas</h4><div class=\"lst\">"+c.hv.map(h=>'<div class="r"><span>'+fCorta(h[0])+" "+esc(h[0].slice(11))+" · "+esc(h[1].split(" ").slice(0,2).join(" "))+(h[3]?" · "+esc(h[3]):"")+(h[5]?" · “"+esc(h[5])+"”":"")+'</span><span class="num">'+(h[4]?dinero(h[4]):'<span class="est e-'+h[2]+'">'+(EST[h[2]]||h[2])+"</span>")+"</span></div>").join("")+"</div></div>":"")+
     '<div class="acc"><button type="button" class="prim" id="fventas">Ver en Ventas</button><button type="button" class="btn" id="fcobranza">Ver en Cobranza</button></div>'+
     "</div></div>";
@@ -920,6 +933,7 @@ function ficha(v){
   $("fventas").onclick=()=>ir("tabV","ventasCliente","Este cliente no tiene ventas en tu panel de los últimos meses.");
   $("fcobranza").onclick=()=>ir("tabC","cobranzaCliente","Este cliente no tiene saldo ni movimientos de cobranza en tu panel.");
 }
+function ventanaTxt(){const m=+D.ventana.slice(5),y=+D.ventana.slice(0,4),m2=m%12+1;return MESN[m-1]+"–"+MESN[m2-1]+" "+(m===12?y+1:y)}
 let tAviso; function aviso(m){const a=$("aviso");a.textContent=m;a.hidden=false;clearTimeout(tAviso);tAviso=setTimeout(()=>a.hidden=true,3500)}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("velo").hidden){$("velo").hidden=true;$("velo").innerHTML=""}});
 })();
