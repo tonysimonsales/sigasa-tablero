@@ -116,9 +116,9 @@ function unirCobranza(ps){
 
 /* ---------- Visitas: unir paquetes ---------- */
 function unirVisitas(ps){
-  const R={corte:"",meses:[],tramos:[],razones:{},planes:[],clientes:[]}, pos=new Map();
+  const R={corte:"",meses:[],ventana:"",tramos:[],razones:{},planes:[],clientes:[]}, pos=new Map();
   for(const p of ps){
-    if(p.corte>R.corte){R.corte=p.corte;R.meses=p.meses;R.tramos=p.tramos}
+    if(p.corte>R.corte){R.corte=p.corte;R.meses=p.meses;R.tramos=p.tramos;R.ventana=p.ventana||""}
     Object.assign(R.razones,p.razones);
     const m=p.clientes.map(c=>{let g=pos.get(c.id); if(g===undefined){g=R.clientes.length;pos.set(c.id,g);R.clientes.push(c)} return g});
     for(const pl of p.planes) R.planes.push(Object.assign({},pl,{v:pl.v.map(v=>[m[v[0]]].concat(v.slice(1)))}));
