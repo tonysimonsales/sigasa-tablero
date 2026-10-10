@@ -126,6 +126,38 @@ function unirVisitas(ps){
   return R;
 }
 
+/* ---------- Sugerencias descartadas (Supabase; si la tabla no existe, se guardan en el navegador) ---------- */
+const DIAS_DESCARTE=60;
+let descartes=null; // Map "cliente:articulo" -> fecha
+async function cargarDescartes(){
+  if(descartes) return descartes;
+  descartes=new Map(); await perfil;
+  const desde=new Date(Date.now()-DIAS_DESCARTE*864e5).toISOString();
+  const {data:{user}}=await sb.auth.getUser();
+  const {data,error}=await sb.from("sugerencias_descartadas").select("cliente_id,articulo_id,creado").eq("user_id",user.id).gte("creado",desde);
+  if(error){descartes.local=true; return descartes}
+  for(const r of data) descartes.set(r.cliente_id+":"+r.articulo_id,r.creado);
+  return descartes;
+}
+window.PANEL=window.PANEL||{};
+window.PANEL.rechazos={
+  async lista(cli){const m=await cargarDescartes(); if(m.local) return LOCAL.lista(cli);
+    return [...m.keys()].filter(k=>k.startsWith(cli+":")).map(k=>+k.split(":")[1])},
+  async descartar(cli,art){const m=await cargarDescartes(); if(m.local) return LOCAL.descartar(cli,art);
+    m.set(cli+":"+art,new Date().toISOString());
+    const {error}=await sb.from("sugerencias_descartadas").upsert({cliente_id:cli,articulo_id:art,creado:new Date().toISOString()},{onConflict:"user_id,cliente_id,articulo_id"});
+    if(error) console.warn("No se guardó el descarte:",error.message)},
+  async restaurar(cli){const m=await cargarDescartes(); if(m.local) return LOCAL.restaurar(cli);
+    for(const k of [...m.keys()]) if(k.startsWith(cli+":")) m.delete(k);
+    await sb.from("sugerencias_descartadas").delete().eq("cliente_id",cli)}
+};
+const LOCAL={ // respaldo en el navegador
+  _l(){try{return JSON.parse(localStorage.getItem("sug_descartados")||"{}")}catch(e){return {}}},
+  _g(o){try{localStorage.setItem("sug_descartados",JSON.stringify(o))}catch(e){}},
+  async lista(cli){const o=this._l()[cli]||{},lim=new Date(Date.now()-DIAS_DESCARTE*864e5).toISOString().slice(0,10);return Object.keys(o).filter(a=>o[a]>=lim).map(Number)},
+  async descartar(cli,art){const o=this._l();(o[cli]=o[cli]||{})[art]=new Date().toISOString().slice(0,10);this._g(o)},
+  async restaurar(cli){const o=this._l();delete o[cli];this._g(o)}};
+
 window.FUENTE={
   visitas:async()=>unirVisitas((await bajar("visitas")).map(b=>JSON.parse(new TextDecoder().decode(b)))),
   ventas:async()=>unirVentas((await bajar("ventas")).map(leerVentas)),

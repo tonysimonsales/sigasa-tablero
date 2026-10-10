@@ -175,9 +175,9 @@ tfoot td:first-child{background:var(--surface-2)}
 .vis .dt{font-size:.76rem;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:2px 8px}
 .vis .dt b{font-family:var(--f-num);font-weight:500;color:var(--ink-2)}
 .vis .dt .rojo{color:var(--bad)}
-.vis.e-F{border-left-color:var(--good)} .vis.e-I{border-left-color:var(--bad)} .vis.e-L{border-left-color:var(--ink-3)} .vis.e-P{border-left-color:var(--s1)}
+.vis.e-F,.vis.e-A{border-left-color:var(--good)} .vis.e-I,.vis.e-X{border-left-color:var(--bad)} .vis.e-N{border-left-color:var(--ink-3)} .vis.e-P{border-left-color:var(--s1)}
 .est{display:inline-block;font-size:.7rem;font-weight:600;letter-spacing:.03em;border-radius:999px;padding:1px 7px;border:1px solid currentColor}
-.est.e-F{color:var(--good)} .est.e-I{color:var(--bad)} .est.e-L{color:var(--ink-3)} .est.e-P{color:var(--s1)}
+.est.e-F,.est.e-A{color:var(--good)} .est.e-I,.est.e-X{color:var(--bad)} .est.e-N{color:var(--ink-3)} .est.e-P{color:var(--s1)}
 .vacio{color:var(--ink-3);font-size:.85rem;padding:8px 2px}
 .ficha{width:min(720px,100%)}
 .ficha .cuerpo{overflow:auto;padding:14px;display:grid;gap:14px}
@@ -199,6 +199,11 @@ tfoot td:first-child{background:var(--surface-2)}
 .ficha .lst .r.art small{display:block;color:var(--ink-3);font-size:.75rem;margin-top:1px}
 .ficha .cl{color:var(--ink-3);font-family:var(--f-num);font-size:.76rem}
 .ficha .rojo{color:var(--bad)}
+.ficha .r.sug{align-items:center}
+.ficha .r.sug .x{flex:none;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--surface-2);color:var(--ink-3);cursor:pointer;font-size:.85rem}
+.ficha .r.sug .x:hover{color:var(--bad);border-color:var(--bad)}
+.ficha .r.sug.fuera{opacity:0;transition:opacity .18s}
+.ficha .desc{font-size:.8rem;color:var(--ink-3);margin-top:6px}
 @media (max-width:720px){.ficha .dos{grid-template-columns:1fr}}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:var(--r);z-index:30;font-size:.9rem;max-width:calc(100% - 32px)}
 @media (max-width:720px){.rdias{display:flex}.cal{grid-template-columns:1fr}.cal .dia:not(.sel){display:none}}
@@ -233,9 +238,9 @@ tfoot td:first-child{background:var(--surface-2)}
     <div class="corte" id="corte">Cargando datos…</div>
   </header>
   <nav class="tabs" role="tablist" aria-label="Secciones">
-    <button type="button" role="tab" id="tabV" aria-selected="true" aria-controls="pVentas">Ventas</button>
+    <button type="button" role="tab" id="tabR" aria-selected="true" aria-controls="pVisitas">Visitas</button>
+    <button type="button" role="tab" id="tabV" aria-selected="false" aria-controls="pVentas">Ventas</button>
     <button type="button" role="tab" id="tabC" aria-selected="false" aria-controls="pCobranza">Cobranza</button>
-    <button type="button" role="tab" id="tabR" aria-selected="false" aria-controls="pVisitas">Visitas</button>
   </nav>
   <div id="pVentas" class="pestana" role="tabpanel" aria-labelledby="tabV">
 
@@ -639,9 +644,9 @@ window.PANEL.cobranzaCliente=async id=>{await asegurar(); if(!C) return false;
   for(const d of DIMS) st.f[d.k].clear(); st.f.cliente.add(i); st.dim="cliente"; st.limite=50; st.buscar=""; $("cbuscar").value="";
   pintar(); return true};
 for(const [t] of tabs) $(t).onclick=()=>mostrar(t);
-let ini="tabV"; try{ini=localStorage.getItem("tablero_pestana")||"tabV"}catch(e){}
+let ini="tabR"; try{ini=localStorage.getItem("tablero_pestana")||"tabR"}catch(e){}
 if(location.hash==="#cobranza") ini="tabC"; if(location.hash==="#visitas") ini="tabR";
-const arranque=()=>mostrar(tabs.some(t=>t[0]===ini)?ini:"tabV");
+const arranque=()=>mostrar(tabs.some(t=>t[0]===ini)?ini:"tabR");
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",arranque); else setTimeout(arranque,0);
 
 let C=null;
@@ -820,7 +825,10 @@ const F=s=>{const[y,m,d]=s.slice(0,10).split("-").map(Number);return new Date(y,
 const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 const fCorta=s=>{if(!s)return"—";const d=F(s);return d.getDate()+" "+MESN[d.getMonth()]+(d.getFullYear()!==new Date().getFullYear()?" "+d.getFullYear():"")};
 // Estatus de visita en Microsip en Ruta (P = sin registro todavía)
-const EST={F:"Con pedido",I:"No efectiva",L:"Sin pedido",N:"Sin registro",P:"Pendiente"};
+// Estatus en Microsip en Ruta: F = con pedido, I = no efectiva (con motivo), L = programada sin realizar
+const EST={F:"Con pedido",A:"Anticipado",I:"No efectiva",P:"Pendiente",X:"No realizada",N:"Sin registro"};
+// Estatus para mostrar: L antes/del día del corte = no realizada; L futura = pendiente; F antes del inicio del plan = anticipado
+const est=(v,p)=>v[3]==="L"||v[3]==="P"?(v[1]>D.corte?"P":"X"):v[3]==="F"&&v[5]&&p&&v[5].slice(0,10)<p.i?"A":v[3];
 let D=null, prom=null, plan=null, diaSel=null;
 
 async function cargar(){
@@ -854,12 +862,12 @@ function elegir(i){
   pintarResumen(); pintarDias(dias); pintarCal(dias);
 }
 function pintarResumen(){
-  const v=plan.v, n=v.length, c=k=>v.filter(x=>x[3]===k).length, ped=v.reduce((s,x)=>s+(x[6]||0),0);
+  const v=plan.v, n=v.length, c=k=>v.filter(x=>est(x,plan)===k).length, ped=v.reduce((s,x)=>s+(x[6]||0),0);
   const cl=new Set(v.map(x=>x[0])), saldo=[...cl].reduce((s,k)=>s+(D.clientes[k].sf||0),0);
   const venc=[...cl].reduce((s,k)=>{const t=D.clientes[k].t;return s+(t?t.slice(1).reduce((a,b)=>a+b,0):0)},0);
   const tiles=[["Visitas planeadas",fmt.format(n),cl.size+" clientes · "+esc(plan.agn)],
-    ["Con pedido",fmt.format(c("F")),n?(c("F")/n*100).toFixed(0)+"% del plan":""],
-    ["Pendientes",fmt.format(c("P")),(c("L")+c("I")+c("N"))+" sin pedido o no efectivas"],
+    ["Con pedido",fmt.format(c("F")+c("A")),(n?((c("F")+c("A"))/n*100).toFixed(0)+"% del plan":"")+(c("A")?" · "+c("A")+" anticipados":"")],
+    ["Pendientes",fmt.format(c("P")),c("X")+" no realizadas · "+c("I")+" no efectivas"],
     ["Pedidos del plan",dinero(ped),"suma de pedidos registrados en las visitas"],
     ["Saldo de los clientes",dinero(saldo),"al "+fCorta(D.corte)],
     ["Vencido",dinero(venc),saldo?(venc/saldo*100).toFixed(1)+"% del saldo":""]];
@@ -878,8 +886,9 @@ function pintarCal(dias){
   $("rcal").innerHTML=dias.map(d=>{const x=F(d), vs=plan.v.filter(v=>v[1]===d).sort((a,b)=>a[2]-b[2]);
     return '<div class="dia'+(d===hoy?" hoy":"")+(d===diaSel?" sel":"")+'" data-d="'+d+'"><h3>'+DIAS[x.getDay()]+" "+x.getDate()+" "+MESN[x.getMonth()]+"<small>"+(vs.length?vs.length+" visitas":"")+"</small></h3>"+
       (vs.map((v,n)=>{const c=D.clientes[v[0]], t=c.t, ven=t?t.slice(1).reduce((a,b)=>a+b,0):0;
-        return '<button type="button" class="vis e-'+v[3]+'" data-k="'+plan.v.indexOf(v)+'"><span class="o">'+(n+1)+'</span><span class="nm">'+esc(c.n)+"</span>"+
-          '<span class="dt"><span class="est e-'+v[3]+'">'+EST[v[3]]+"</span>"+(v[6]?"<span>Pedido <b>"+dinero(v[6])+"</b></span>":"")+
+        const e=est(v,plan);
+        return '<button type="button" class="vis e-'+e+'" data-k="'+plan.v.indexOf(v)+'"><span class="o">'+(n+1)+'</span><span class="nm">'+esc(c.n)+"</span>"+
+          '<span class="dt"><span class="est e-'+e+'">'+EST[e]+(e==="A"?" "+fCorta(v[5]):"")+"</span>"+(v[6]?"<span>Pedido <b>"+dinero(v[6])+"</b></span>":"")+
           (c.sf?"<span>Saldo <b>"+dinero(c.sf)+"</b></span>":"")+(ven>1?'<span class="rojo">Vencido <b class="rojo">'+dinero(ven)+"</b></span>":"")+"</span></button>"}).join("")||'<div class="vacio">Sin visitas</div>')+"</div>"}).join("");
   $("rcal").querySelectorAll(".vis").forEach(b=>b.onclick=()=>ficha(plan.v[+b.dataset.k]));
 }
@@ -905,8 +914,8 @@ function ficha(v){
   velo.innerHTML='<div class="hoja ficha" role="dialog" aria-modal="true" aria-label="Resumen del cliente"><header><div style="min-width:0"><h3 style="overflow:hidden;text-overflow:ellipsis">'+esc(c.n)+'</h3>'+
     '<div class="sub2">'+[c.z,c.ve&&"Vendedor: "+c.ve,c.co&&"Cobrador: "+c.co].filter(Boolean).map(esc).join(" · ")+"</div></div>"+
     '<button type="button" class="link" id="fcerrar">Cerrar</button></header><div class="cuerpo">'+
-    '<div class="sub2">Visita del '+fCorta(v[1])+" · visita "+(plan.v.filter(x=>x[1]===v[1]).sort((a,b)=>a[2]-b[2]).indexOf(v)+1)+" del día"+' · <span class="est e-'+v[3]+'">'+EST[v[3]]+"</span>"+
-      (v[5]&&v[3]!=="P"?" · registrada "+esc(v[5].slice(0,10)===v[1]?v[5].slice(11):fCorta(v[5])+" "+v[5].slice(11))+"":"")+(v[6]?" · pedido "+dinero(v[6]):"")+(v[4]&&D.razones[v[4]]?" · "+esc(D.razones[v[4]]):"")+(v[8]?" · “"+esc(v[8])+"”":"")+"</div>"+
+    '<div class="sub2">Visita del '+fCorta(v[1])+" · visita "+(plan.v.filter(x=>x[1]===v[1]).sort((a,b)=>a[2]-b[2]).indexOf(v)+1)+" del día"+' · <span class="est e-'+est(v,plan)+'">'+EST[est(v,plan)]+"</span>"+
+      (v[5]&&(v[3]==="F"||v[3]==="I")?" · registrada "+esc(v[5].slice(0,10)===v[1]?v[5].slice(11):fCorta(v[5])+" "+v[5].slice(11))+"":"")+(v[6]?" · pedido "+dinero(v[6]):"")+(v[4]&&D.razones[v[4]]?" · "+esc(D.razones[v[4]]):"")+(v[8]?" · “"+esc(v[8])+"”":"")+"</div>"+
     '<div class="mini">'+
       cif("Saldo",dinero(c.sf),c.lc?"Límite "+dinero(c.lc)+" · disponible "+dinero(c.lc-c.sf):"Sin límite de crédito")+
       cif("Vencido",'<span style="color:'+(venc>1?"var(--bad)":"inherit")+'">'+dinero(venc)+"</span>",c.sf?(venc/c.sf*100).toFixed(0)+"% del saldo":"")+
@@ -920,18 +929,35 @@ function ficha(v){
     '<div class="dos">'+
       "<div><h4>Lo que más compra <small>12 meses</small></h4>"+(c.ar&&c.ar.length?'<div class="lst">'+c.ar.map(a=>'<div class="r art"><span><span class="cl">'+esc(a[0])+"</span> "+esc(a[1])+
         '<small>'+fmt.format(a[3])+" "+esc((a[4]||"").toLowerCase())+(a[5]&&a[5]<D.ventana?' · <span class="rojo">sin compra en '+esc(ventanaTxt())+"</span>":"")+'</small></span><span class="num">'+dinero(a[2])+"</span></div>").join("")+"</div>":'<div class="vacio">Sin compras en 12 meses</div>')+"</div>"+
-      "<div><h4>Sugeridos <small>no comprados en "+esc(ventanaTxt())+"</small></h4>"+(c.su&&c.su.length?'<div class="lst">'+c.su.map(a=>'<div class="r art"><span><span class="cl">'+esc(a[0])+"</span> "+esc(a[1])+
-        "<small>"+esc(a[2])+"</small></span></div>").join("")+"</div>":'<div class="vacio">Sin sugeridos</div>')+"</div>"+
+      '<div id="fsug"></div>'+
     "</div>"+
     (c.hv.length?"<div><h4>Últimas visitas</h4><div class=\"lst\">"+c.hv.map(h=>'<div class="r"><span>'+fCorta(h[0])+" "+esc(h[0].slice(11))+" · "+esc(h[1].split(" ").slice(0,2).join(" "))+(h[3]?" · "+esc(h[3]):"")+(h[5]?" · “"+esc(h[5])+"”":"")+'</span><span class="num">'+(h[4]?dinero(h[4]):'<span class="est e-'+h[2]+'">'+(EST[h[2]]||h[2])+"</span>")+"</span></div>").join("")+"</div></div>":"")+
     '<div class="acc"><button type="button" class="prim" id="fventas">Ver en Ventas</button><button type="button" class="btn" id="fcobranza">Ver en Cobranza</button></div>'+
     "</div></div>";
-  velo.hidden=false;
+  velo.hidden=false; pintarSug(c);
   const cerrar=()=>{velo.hidden=true;velo.innerHTML=""};
   $("fcerrar").onclick=cerrar; velo.onclick=e=>{if(e.target===velo)cerrar()};
   const ir=async(tab,fn,msg)=>{cerrar(); window.PANEL.mostrar(tab); const ok=await window.PANEL[fn](c.id); if(!ok) aviso(msg)};
   $("fventas").onclick=()=>ir("tabV","ventasCliente","Este cliente no tiene ventas en tu panel de los últimos meses.");
   $("fcobranza").onclick=()=>ir("tabC","cobranzaCliente","Este cliente no tiene saldo ni movimientos de cobranza en tu panel.");
+}
+/* Sugeridos: se muestran 10; el vendedor puede descartar uno y entra el siguiente */
+const NSUG=10;
+const RECH=window.PANEL.rechazos||{ // respaldo local (panel sin usuario): se guarda en este navegador
+  _l(){try{return JSON.parse(localStorage.getItem("sug_descartados")||"{}")}catch(e){return {}}},
+  _g(o){try{localStorage.setItem("sug_descartados",JSON.stringify(o))}catch(e){}},
+  async lista(cli){const o=this._l()[cli]||{},lim=new Date(Date.now()-60*864e5).toISOString().slice(0,10);return Object.keys(o).filter(a=>o[a]>=lim).map(Number)}, // un descarte vale 60 días
+  async descartar(cli,art){const o=this._l();(o[cli]=o[cli]||{})[art]=new Date().toISOString().slice(0,10);this._g(o)},
+  async restaurar(cli){const o=this._l();delete o[cli];this._g(o)}};
+async function pintarSug(c){
+  const box=$("fsug"); if(!box) return;
+  const fuera=new Set(await RECH.lista(c.id)), todos=c.su||[], vis=todos.filter(a=>!fuera.has(a[4])).slice(0,NSUG);
+  const nf=todos.filter(a=>fuera.has(a[4])).length;
+  box.innerHTML="<h4>Sugeridos <small>no comprados en "+esc(ventanaTxt())+"</small></h4>"+(vis.length?'<div class="lst">'+vis.map(a=>'<div class="r art sug"><span><span class="cl">'+esc(a[0])+"</span> "+esc(a[1])+
+      "<small>"+esc(a[2])+'</small></span><button type="button" class="x" data-a="'+a[4]+'" aria-label="Descartar sugerencia" title="Descartar">✕</button></div>').join("")+"</div>":'<div class="vacio">Sin sugeridos</div>')+
+    (nf?'<div class="desc">'+nf+" descartado"+(nf>1?"s":"")+' · <button type="button" class="link" id="frest">Restaurar</button></div>':"");
+  box.querySelectorAll(".x").forEach(b=>b.onclick=async()=>{b.closest(".r").classList.add("fuera");await RECH.descartar(c.id,+b.dataset.a);setTimeout(()=>pintarSug(c),180)});
+  const r=$("frest"); if(r) r.onclick=async()=>{await RECH.restaurar(c.id);pintarSug(c)};
 }
 function ventanaTxt(){const m=+D.ventana.slice(5),y=+D.ventana.slice(0,4),m2=m%12+1;return MESN[m-1]+"–"+MESN[m2-1]+" "+(m===12?y+1:y)}
 let tAviso; function aviso(m){const a=$("aviso");a.textContent=m;a.hidden=false;clearTimeout(tAviso);tAviso=setTimeout(()=>a.hidden=true,3500)}
