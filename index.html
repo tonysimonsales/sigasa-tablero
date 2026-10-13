@@ -301,7 +301,7 @@ tfoot td:first-child{background:var(--surface-2)}
       </div>
       <div class="tabla-w"><table id="ctabla"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
       <div class="mas"><button type="button" class="btn" id="cvermas" hidden>Mostrar más</button></div>
-      <p class="aviso">Toca un renglón para filtrar por él. Saldo promedio: promedio del saldo de cada día. Ventas netas sin IVA menos devoluciones. Recuperación = saldo promedio ÷ venta neta diaria. Cobrado: cobros aplicados con IVA (sin devoluciones ni ajustes); la quincena es del 1 al 15 o del 16 a fin de mes.</p>
+      <p class="aviso">Toca un renglón para filtrar por él. Saldo promedio: promedio del saldo de cada día. Ventas netas sin IVA menos devoluciones. Recuperación = saldo promedio ÷ venta neta diaria. Cobrado: cobros aplicados con IVA (sin devoluciones ni ajustes); la quincena es del 1 al 15 o del 16 a fin de mes. El cobrado se compara contra el mismo periodo del año anterior, hasta el mismo día cuando el mes está en curso.</p>
     </section>
   </div>
   <div id="pVisitas" class="pestana" role="tabpanel" aria-labelledby="tabR" hidden>
@@ -692,21 +692,36 @@ function pasa(f){
   const F=st.f;
   return (!F.cobrador.size||F.cobrador.has(f.c))&&(!F.zona.size||F.zona.has(f.z))&&(!F.cliente.size||F.cliente.has(C.clientes.indexOf(f)));
 }
-function acum(){return {ss:0,dias:0,vn:0,cr:0,pi:0,pd:0,sf:0,cb:0,cq:0,t:new Array(C.tramos.length).fill(0)}}
+function acum(){return {ss:0,dias:0,vn:0,cr:0,pi:0,pd:0,sf:0,cb:0,cq:0,cbA:null,cqA:null,t:new Array(C.tramos.length).fill(0)}}
+// Cobrado del mismo periodo del año anterior (12 meses antes); el mes del corte se compara hasta el mismo día
+function sumarAnt(a,f,idx){
+  if(!f.q1||idx[0]<12) return; const Q=quincena(idx), ult=C.meses.length-1, parcial=Q.L===ult;
+  if(a.cbA===null){a.cbA=0;a.cqA=0}
+  for(const i of idx){const j=i-12; a.cbA+=(i===ult&&parcial&&f.pa)?f.pa[0]:f.q1[j]+f.q2[j]}
+  const j=Q.L-12; a.cqA+=(parcial&&f.pa)?(Q.q?f.pa[1]:f.pa[0]):(Q.q?f.q2[j]:f.q1[j]);
+}
+function etAnt(idx){if(idx[0]<12) return ""; const Q=quincena(idx), ult=C.meses.length-1, M=C.meses[Q.L-12], m=MESN[+M.slice(5)-1]+" "+M.slice(0,4);
+  const d=C.ant_dia, fin=new Date(+M.slice(0,4),+M.slice(5),0).getDate();
+  const parc=Q.L===ult&&d<fin, ini=MESN[+C.meses[idx[0]-12].slice(5)-1];
+  const cb=idx.length>1?ini+" – "+(parc?d+" ":"")+m:(parc?"1–"+d+" ":"")+m;
+  const cq=(Q.q?"16–":"1–")+(Q.L===ult?(Q.q?Math.max(d,16):Math.min(d,15)):(Q.q?fin:15))+" "+m;
+  return {cb,cq}}
 // Quincena del cobrado: la del corte si el periodo termina en el mes del corte; si no, la segunda del último mes
 function quincena(idx){const L=idx[idx.length-1], M=C.meses[L], [cy,cm,cd]=C.corte.split("-");
   const q=(M===cy+"-"+cm&&+cd<=15)?0:1, fin=new Date(+M.slice(0,4),+M.slice(5),0).getDate();
-  return {L,q,et:(q?"16–"+fin:"1–15")+" "+MESN[+M.slice(5)-1]}}
+  const cur=M===cy+"-"+cm; // mes en curso: la quincena llega hasta el día de los datos
+  return {L,q,et:(q?"16–"+(cur?+cd:fin):"1–"+(cur?Math.min(+cd,15):15))+" "+MESN[+M.slice(5)-1]}}
 function sumar(a,f,idx,conT){
   const Q=quincena(idx);
   for(const i of idx){a.ss+=f.ss[i];a.vn+=f.vn[i];a.cr+=f.cr[i];a.pi+=f.pi[i];a.pd+=f.pd[i];if(f.q1)a.cb+=f.q1[i]+f.q2[i]}
   if(f.q1) a.cq+=(Q.q?f.q2:f.q1)[Q.L];
+  sumarAnt(a,f,idx);
   a.sf+=f.sf[idx[idx.length-1]];
   if(conT&&f.t) for(let k=0;k<f.t.length;k++) a.t[k]+=f.t[k];
 }
 function ind(a,idx){
   const dias=idx.reduce((s,i)=>s+C.dias[i],0), prom=a.ss/dias, rot=prom>0.005&&a.vn>0?a.vn/prom:null;
-  return {sf:a.sf,prom,vn:a.vn,cr:a.cr,rot,rec:rot?dias/rot:null,real:a.pi?a.pd/a.pi:null,cb:a.cb,cq:a.cq,t:a.t,venc:a.t.slice(1).reduce((s,v)=>s+v,0)};
+  return {sf:a.sf,prom,vn:a.vn,cr:a.cr,rot,rec:rot?dias/rot:null,real:a.pi?a.pd/a.pi:null,cb:a.cb,cq:a.cq,cbA:a.cbA,cqA:a.cqA,t:a.t,venc:a.t.slice(1).reduce((s,v)=>s+v,0)};
 }
 function llave(f,i){return st.dim==="cobrador"?f.c:st.dim==="zona"?f.z:i}
 function nombre(dim,k){return dim==="cobrador"?C.cobradores[k]:dim==="zona"?C.zonas[k]:C.clientes[k].n}
@@ -742,10 +757,10 @@ function pintarResumen(){
     ["Saldo al cierre",dinero(t.sf),a?cambio(t.sf,a.sf,true,true):"",R.P.et],
     ["Saldo promedio",dinero(t.prom),a?cambio(t.prom,a.prom,true,true):"","promedio diario"],
     ["Ventas netas",dinero(t.vn),a?cambio(t.vn,a.vn,false,true):"","sin IVA, menos devoluciones"],
-    ["Cobrado en el periodo",dinero(t.cb),"","cobros con IVA · "+esc(R.P.et)],
+    ["Cobrado en el periodo",dinero(t.cb),t.cbA!=null?cambio(t.cb,t.cbA,false,true)+' <span class="aviso">vs '+esc(etAnt(R.P.act).cb)+"</span>":"","cobros con IVA · "+esc(R.P.et)],
     ["Recuperación",dec(t.rec,1)+(t.rec?" días":""),a?cambio(t.rec,a.rec,true,false):"","saldo promedio ÷ venta diaria"],
-    ["Cobrado en la quincena",dinero(t.cq),"","cobros con IVA · "+esc(quincena(R.P.act).et)]];
-  $("cresumen").innerHTML=tiles.map(([k,v,c,ref])=>'<div class="cifra"><div class="k">'+k+'</div><div class="m">'+v+'</div><div class="ref">'+ref+'</div>'+(c?"<div>"+c+' <span class="aviso">vs '+esc(R.P.eta)+"</span></div>":"")+"</div>").join("");
+    ["Cobrado en la quincena",dinero(t.cq),t.cqA!=null?cambio(t.cq,t.cqA,false,true)+' <span class="aviso">vs '+esc(etAnt(R.P.act).cq)+"</span>":"","cobros con IVA · "+esc(quincena(R.P.act).et)]];
+  $("cresumen").innerHTML=tiles.map(([k,v,c,ref])=>'<div class="cifra"><div class="k">'+k+'</div><div class="m">'+v+'</div><div class="ref">'+ref+'</div>'+(c?"<div>"+c+(c.includes('class="aviso"')?"":' <span class="aviso">vs '+esc(R.P.eta)+"</span>")+"</div>":"")+"</div>").join("");
 }
 function pintarAntiguedad(){
   const [y,m,d]=C.corte.split("-");
@@ -767,9 +782,9 @@ function pintarTabla(){
   tb.tHead.querySelectorAll("th").forEach(th=>th.onclick=()=>{const c=th.dataset.col;st.orden=o.col===c?{col:c,dir:-o.dir}:{col:c,dir:c==="n"?1:-1};pintarTabla()});
   const fila=(f,pie)=>"<td"+(pie?"":' title="'+esc(f.n)+'"')+">"+esc(f.n)+"</td>"+
     '<td class="n">'+dinero(f.sf)+'</td><td class="n">'+dinero(f.prom)+'</td><td class="n">'+dinero(f.vn)+"</td>"+
-    '<td class="n">'+dinero(f.cb)+"</td>"+
+    '<td class="n">'+dinero(f.cb)+(!pie&&f.cbA!=null?"<span class=\"sub\">"+cambio(f.cb,f.cbA,false,true)+"</span>":"")+"</td>"+
     '<td class="n">'+dec(f.rec,1)+(f.a&&!pie?"<span class=\"sub\">"+cambio(f.rec,f.a.rec,true,false)+"</span>":"")+"</td>"+
-    '<td class="n">'+dinero(f.cq)+'</td><td class="n">'+(R.ultimo?dinero(f.venc):"—")+"</td>";
+    '<td class="n">'+dinero(f.cq)+(!pie&&f.cqA!=null?"<span class=\"sub\">"+cambio(f.cq,f.cqA,false,true)+"</span>":"")+'</td><td class="n">'+(R.ultimo?dinero(f.venc):"—")+"</td>";
   tb.tBodies[0].innerHTML=filas.slice(0,st.limite).map(f=>'<tr data-k="'+f.k+'">'+fila(f,false)+"</tr>").join("")||
     '<tr><td colspan="8" style="text-align:center;color:var(--ink-3);position:static">Sin saldos con estos filtros</td></tr>';
   const t=Object.assign({n:"Total ("+fmt.format(filas.length)+")"},R.tot);
