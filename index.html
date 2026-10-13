@@ -179,6 +179,8 @@ tfoot td:first-child{background:var(--surface-2)}
 .est{display:inline-block;font-size:.7rem;font-weight:600;letter-spacing:.03em;border-radius:999px;padding:1px 7px;border:1px solid currentColor}
 .est.e-F,.est.e-A{color:var(--good)} .est.e-I,.est.e-X{color:var(--bad)} .est.e-N{color:var(--ink-3)} .est.e-P{color:var(--s1)}
 .vacio{color:var(--ink-3);font-size:.85rem;padding:8px 2px}
+#rresumen .cifra.ir{cursor:pointer} #rresumen .cifra.ir:hover{border-color:var(--accent)}
+#rresumen .rojo{color:var(--bad)}
 .ficha{width:min(720px,100%)}
 .ficha .cuerpo{overflow:auto;padding:14px;display:grid;gap:14px}
 .ficha .sub2{color:var(--ink-2);font-size:.86rem}
@@ -886,13 +888,24 @@ function pintarResumen(){
   const v=plan.v, n=v.length, c=k=>v.filter(x=>est(x,plan)===k).length, ped=v.reduce((s,x)=>s+(x[6]||0),0);
   const cl=new Set(v.map(x=>x[0])), saldo=[...cl].reduce((s,k)=>s+(D.clientes[k].sf||0),0);
   const venc=[...cl].reduce((s,k)=>{const t=D.clientes[k].t;return s+(t?t.slice(1).reduce((a,b)=>a+b,0):0)},0);
-  const tiles=[["Visitas planeadas",fmt.format(n),cl.size+" clientes · "+esc(plan.agn)],
-    ["Con pedido",fmt.format(c("F")+c("A")),(n?((c("F")+c("A"))/n*100).toFixed(0)+"% del plan":"")+(c("A")?" · "+c("A")+" anticipados":"")],
-    ["Pendientes",fmt.format(c("P")),c("X")+" no realizadas · "+c("I")+" no efectivas"],
-    ["Pedidos del plan",dinero(ped),"suma de pedidos registrados en las visitas"],
-    ["Saldo de los clientes",dinero(saldo),"al "+fCorta(D.corte)],
-    ["Vencido",dinero(venc),saldo?(venc/saldo*100).toFixed(1)+"% del saldo":""]];
-  $("rresumen").innerHTML=tiles.map(([k,m,r])=>'<div class="cifra"><div class="k">'+k+'</div><div class="m">'+m+'</div><div class="ref">'+r+"</div></div>").join("");
+  // Hoy = fecha del dispositivo; "mañana" = el siguiente día del plan con visitas
+  const hoy=iso(new Date()), dHoy=v.filter(x=>x[1]===hoy);
+  const sig=[...new Set(v.map(x=>x[1]).filter(d=>d>hoy))].sort()[0], dSig=sig?v.filter(x=>x[1]===sig):[];
+  const man=iso(new Date(Date.now()+864e5)), etSig=!sig?"Visitas para mañana":sig===man?"Visitas para mañana":"Próximas visitas";
+  const diaTxt=d=>{const x=F(d);return DIAS[x.getDay()]+" "+x.getDate()+" "+MESN[x.getMonth()]};
+  const antes=v.filter(x=>x[1]<hoy), pend=antes.filter(x=>{const e=est(x,plan);return e==="P"||e==="X"});
+  const conPed=c("F");
+  const tiles=[
+    ["Visitas para hoy",fmt.format(dHoy.length),dHoy.length?diaTxt(hoy)+" · "+new Set(dHoy.map(x=>x[0])).size+" clientes":diaTxt(hoy)+" · sin visitas en el plan",dHoy.length?hoy:""],
+    ["Visitas pendientes",fmt.format(pend.length),antes.length?"de días anteriores a hoy · de "+antes.length+" programadas":"aún no hay días anteriores en el plan",""],
+    ["Visitas con pedido",fmt.format(conPed),"desde el inicio del plan ("+fCorta(plan.i)+")"+(c("A")?" · "+c("A")+" anticipados aparte":""),""],
+    [etSig,fmt.format(dSig.length),sig?diaTxt(sig)+" · "+new Set(dSig.map(x=>x[0])).size+" clientes":"no quedan días en el plan",sig||""],
+    ["Pedidos del plan",dinero(ped),"suma de pedidos registrados en las visitas",""],
+    ["Saldo de los clientes",dinero(saldo),"al "+fCorta(D.corte)+'<br><span class="'+(venc>1?"rojo":"")+'">Vencido '+dinero(venc)+" · "+(saldo?(venc/saldo*100).toFixed(1):"0")+"%</span>",""]];
+  $("rresumen").innerHTML=tiles.map(([k,m,r,d])=>'<div class="cifra'+(d?" ir":"")+'"'+(d?' data-d="'+d+'" role="button" tabindex="0"':"")+'><div class="k">'+k+'</div><div class="m">'+m+'</div><div class="ref">'+r+"</div></div>").join("");
+  $("rresumen").querySelectorAll(".ir").forEach(t=>t.onclick=()=>{diaSel=t.dataset.d;pintarDias(diasPlan(plan));
+    document.querySelectorAll("#rcal .dia").forEach(e=>e.classList.toggle("sel",e.dataset.d===diaSel));
+    const el=document.querySelector('#rcal .dia[data-d="'+diaSel+'"]'); if(el) el.scrollIntoView({behavior:"smooth",block:"start"})});
 }
 function pintarDias(dias){
   const b=$("rdias");
