@@ -243,6 +243,7 @@ tfoot td:first-child{background:var(--surface-2)}
     <button type="button" role="tab" id="tabR" aria-selected="true" aria-controls="pVisitas">Visitas</button>
     <button type="button" role="tab" id="tabV" aria-selected="false" aria-controls="pVentas">Ventas</button>
     <button type="button" role="tab" id="tabC" aria-selected="false" aria-controls="pCobranza">Cobranza</button>
+    <button type="button" role="tab" id="tabU" aria-selected="false" aria-controls="pUso" hidden>Uso</button>
   </nav>
   <div id="pVentas" class="pestana" role="tabpanel" aria-labelledby="tabV">
 
@@ -304,6 +305,18 @@ tfoot td:first-child{background:var(--surface-2)}
       <div class="tabla-w"><table id="ctabla"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
       <div class="mas"><button type="button" class="btn" id="cvermas" hidden>Mostrar más</button></div>
       <p class="aviso">Toca un renglón para filtrar por él. Saldo promedio: promedio del saldo de cada día. Ventas netas sin IVA menos devoluciones. Recuperación = saldo promedio ÷ venta neta diaria. Cobrado: cobros aplicados con IVA (sin devoluciones ni ajustes); la quincena es del 1 al 15 o del 16 a fin de mes. El cobrado se compara contra el mismo periodo del año anterior, hasta el mismo día cuando el mes está en curso.</p>
+    </section>
+  </div>
+  <div id="pUso" class="pestana" role="tabpanel" aria-labelledby="tabU" hidden>
+    <section class="panel controles" aria-label="Periodo de uso">
+      <div class="fila"><div class="campo"><label class="etq" for="uper">Periodo</label>
+        <select id="uper"><option value="0">Hoy</option><option value="1">Ayer</option><option value="7" selected>Últimos 7 días</option><option value="30">Últimos 30 días</option></select></div></div>
+    </section>
+    <section class="cresumen" id="uresumen" aria-live="polite"><div class="cargando">Cargando uso…</div></section>
+    <section class="panel desg">
+      <div class="ghead"><h2>Por usuario</h2></div>
+      <div class="tabla-w"><table id="utabla"><thead></thead><tbody></tbody></table></div>
+      <p class="aviso">Tiempo = minutos con el panel en pantalla (si lo dejan abierto en segundo plano no cuenta). Toca un usuario para ver sus entradas.</p>
     </section>
   </div>
   <div id="pVisitas" class="pestana" role="tabpanel" aria-labelledby="tabR" hidden>
@@ -631,13 +644,14 @@ const dec=(v,n)=>v==null||!isFinite(v)?"—":v.toFixed(n);
 const mesTxt=m=>{const[y,mm]=m.split("-");return MESN[+mm-1]+" "+y};
 
 /* Pestañas */
-const tabs=[["tabV","pVentas"],["tabC","pCobranza"],["tabR","pVisitas"]];
+const tabs=[["tabV","pVentas"],["tabC","pCobranza"],["tabR","pVisitas"],["tabU","pUso"]];
 let prom=null; const asegurar=()=>prom||(prom=cargar());
 function mostrar(id){
   for(const [t,p] of tabs){const on=t===id;$(t).setAttribute("aria-selected",on);$(p).hidden=!on}
   try{localStorage.setItem("tablero_pestana",id)}catch(e){}
   if(id==="tabC") asegurar();
   if(id==="tabR"&&window.PANEL.visitas) window.PANEL.visitas();
+  if(id==="tabU"&&window.PANEL.uso) window.PANEL.uso();
   window.scrollTo({top:0});
 }
 window.PANEL=window.PANEL||{}; window.PANEL.mostrar=mostrar;
@@ -648,7 +662,7 @@ window.PANEL.cobranzaCliente=async id=>{await asegurar(); if(!C) return false;
 for(const [t] of tabs) $(t).onclick=()=>mostrar(t);
 let ini="tabR"; try{ini=localStorage.getItem("tablero_pestana")||"tabR"}catch(e){}
 if(location.hash==="#cobranza") ini="tabC"; if(location.hash==="#visitas") ini="tabR";
-const arranque=()=>mostrar(tabs.some(t=>t[0]===ini)?ini:"tabR");
+const arranque=()=>mostrar(tabs.some(t=>t[0]===ini)&&!$(ini).hidden?ini:"tabR");
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",arranque); else setTimeout(arranque,0);
 
 let C=null;

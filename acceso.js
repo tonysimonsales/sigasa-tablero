@@ -33,7 +33,7 @@ async function arrancar(){
   $("aform").onsubmit=entrar;
   const {data:{session}}=await sb.auth.getSession();
   if(!session){mostrarAcceso();return}
-  const {data,error}=await sb.from("perfiles").select("nombre,rol,activo").maybeSingle();
+  const {data,error}=await sb.from("perfiles").select("*").maybeSingle();
   if(error||!data||!data.activo){
     await sb.auth.signOut();
     mostrarAcceso(error?"No se pudo validar tu usuario: "+error.message:"Tu usuario no tiene acceso activo. Pide a Tony que lo revise.");
@@ -43,6 +43,8 @@ async function arrancar(){
   u.innerHTML='<span>'+esc(data.nombre)+'</span><button type="button" class="link" id="asalir">Salir</button>';
   h.appendChild(u); $("asalir").onclick=salir;
   listo(data);
+  registrarUso(data);
+  if(data.ve_uso){$("tabU").hidden=false; window.PANEL.uso=()=>usoProm||(usoProm=reporteUso())}
 }
 
 /* ---------- Descarga y descompresión de paquetes ---------- */
@@ -157,6 +159,66 @@ const LOCAL={ // respaldo en el navegador
   async lista(cli){const o=this._l()[cli]||{},lim=new Date(Date.now()-DIAS_DESCARTE*864e5).toISOString().slice(0,10);return Object.keys(o).filter(a=>o[a]>=lim).map(Number)},
   async descartar(cli,art){const o=this._l();(o[cli]=o[cli]||{})[art]=new Date().toISOString().slice(0,10);this._g(o)},
   async restaurar(cli){const o=this._l();delete o[cli];this._g(o)}};
+
+/* ---------- Registro de uso: sesión al abrir; cada minuto suma el tiempo con la página en pantalla ---------- */
+let ses=null, seg=0, marca=Date.now(), ocultoDesde=null;
+const equipo=()=>/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)?"Celular":"Computadora";
+async function nuevaSesion(){
+  ses=crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2); seg=0; marca=Date.now();
+  const {error}=await sb.from("uso_sesiones").insert({id:ses,equipo:equipo()}); if(error) ses=null; // sin tabla: no se registra
+}
+async function latido(){
+  if(!ses) return;
+  if(document.visibilityState==="visible"){const d=Math.min((Date.now()-marca)/1000,90); seg+=d}
+  marca=Date.now();
+  await sb.from("uso_sesiones").update({ultimo:new Date().toISOString(),segundos:Math.round(seg)}).eq("id",ses);
+}
+function registrarUso(){
+  nuevaSesion();
+  setInterval(()=>{if(document.visibilityState==="visible") latido()},60000);
+  document.addEventListener("visibilitychange",()=>{
+    if(document.visibilityState==="hidden"){latido(); ocultoDesde=Date.now()}
+    else{ // si estuvo fuera más de 30 min, cuenta como una entrada nueva
+      if(ocultoDesde&&Date.now()-ocultoDesde>30*60000) nuevaSesion(); else marca=Date.now();
+      ocultoDesde=null}
+  });
+}
+
+/* ---------- Pestaña Uso (solo perfiles con ve_uso) ---------- */
+let usoProm=null, usoFilas=[];
+const fmtN=new Intl.NumberFormat("es-MX",{maximumFractionDigits:0});
+const hm=s=>{const m=Math.round(s/60);return m<60?m+" min":Math.floor(m/60)+" h "+String(m%60).padStart(2,"0")+" min"};
+const fh=d=>d.toLocaleString("es-MX",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+async function reporteUso(){
+  $("uper").onchange=()=>cargarUso(); await cargarUso();
+}
+async function cargarUso(){
+  const dias=+$("uper").value, h=new Date(); h.setHours(0,0,0,0);
+  const desde=new Date(h.getTime()-(dias===0?0:dias===1?1:dias-1)*864e5);
+  const {data,error}=await sb.rpc("reporte_uso",{desde:desde.toISOString()});
+  if(error){$("uresumen").innerHTML='<div class="cargando">No se pudo cargar el uso: '+esc(error.message)+"</div>";return}
+  let filas=data; if(dias===1) filas=filas.map(r=>r.inicio&&new Date(r.inicio)>=h?Object.assign({},r,{sesion:null,inicio:null,segundos:null}):r);
+  const por=new Map();
+  for(const r of filas){let u=por.get(r.usuario); if(!u){u={n:r.usuario,rol:r.rol,s:[]};por.set(r.usuario,u)} if(r.sesion) u.s.push(r)}
+  usoFilas=[...por.values()].map(u=>({...u,seg:u.s.reduce((a,r)=>a+(r.segundos||0),0),dias:new Set(u.s.map(r=>new Date(r.inicio).toDateString())).size,
+    ult:u.s.reduce((a,r)=>!a||r.inicio>a?r.inicio:a,null)})).sort((a,b)=>b.seg-a.seg||a.n.localeCompare(b.n,"es"));
+  const act=usoFilas.filter(u=>u.s.length), tot=act.reduce((a,u)=>a+u.seg,0), ent=act.reduce((a,u)=>a+u.s.length,0);
+  const t=[["Usuarios que entraron",act.length+" de "+usoFilas.length,""],["Entradas",fmtN.format(ent),""],["Tiempo total",hm(tot),act.length?"promedio "+hm(tot/act.length)+" por usuario":""]];
+  $("uresumen").innerHTML=t.map(([k,m,r])=>'<div class="cifra"><div class="k">'+k+'</div><div class="m">'+m+'</div><div class="ref">'+r+"</div></div>").join("");
+  const tb=$("utabla");
+  tb.tHead.innerHTML="<tr><th>Usuario</th><th>Días con uso</th><th>Entradas</th><th>Tiempo</th><th>Última entrada</th></tr>";
+  tb.tBodies[0].innerHTML=usoFilas.map((u,i)=>'<tr data-i="'+i+'"><td title="'+esc(u.n)+'">'+esc(u.n)+(u.rol!=="vendedor"?' <span class="sub">'+esc(u.rol)+"</span>":"")+"</td>"+
+    '<td class="n">'+(u.s.length?u.dias:"—")+'</td><td class="n">'+(u.s.length||"—")+'</td><td class="n">'+(u.s.length?hm(u.seg):"Sin uso")+'</td><td class="n">'+(u.ult?fh(new Date(u.ult)):"—")+"</td></tr>").join("");
+  tb.tBodies[0].querySelectorAll("tr").forEach(tr=>tr.onclick=()=>detalleUso(usoFilas[+tr.dataset.i]));
+}
+function detalleUso(u){
+  if(!u.s.length) return;
+  const velo=$("velo"), s=u.s.slice().sort((a,b)=>b.inicio.localeCompare(a.inicio));
+  velo.innerHTML='<div class="hoja" role="dialog" aria-modal="true" aria-label="Entradas de '+esc(u.n)+'"><header><h3>'+esc(u.n)+'</h3><button type="button" class="link" id="ucerrar">Cerrar</button></header>'+
+    '<ul>'+s.map(r=>'<li><label style="justify-content:space-between;cursor:default"><span>'+fh(new Date(r.inicio))+" · "+esc(r.equipo||"")+'</span><span class="num">'+hm(r.segundos||0)+"</span></label></li>").join("")+"</ul></div>";
+  velo.hidden=false; const c=()=>{velo.hidden=true;velo.innerHTML=""};
+  $("ucerrar").onclick=c; velo.onclick=e=>{if(e.target===velo)c()};
+}
 
 window.FUENTE={
   visitas:async()=>unirVisitas((await bajar("visitas")).map(b=>JSON.parse(new TextDecoder().decode(b)))),
