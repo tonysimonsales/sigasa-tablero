@@ -44,18 +44,22 @@ async function arrancar(){
   h.appendChild(u); $("asalir").onclick=salir;
   listo(data);
   registrarUso(data);
+  // Pestaña Almacén: admin, supervisores y almacén; el usuario de almacén solo ve esa pestaña
+  if(!["admin","supervisor","almacen"].includes(data.rol)){$("tabA").hidden=true; if($("tabA").getAttribute("aria-selected")==="true") window.PANEL.mostrar("tabR")}
+  if(data.rol==="almacen"){for(const t of ["tabR","tabV","tabC"]) $(t).hidden=true; window.PANEL.inicio="tabA"; window.PANEL.mostrar("tabA")}
   if(data.ve_uso){$("tabU").hidden=false; window.PANEL.uso=()=>usoProm||(usoProm=reporteUso())}
 }
 
 /* ---------- Descarga y descompresión de paquetes ---------- */
-const PREF={ventas:"v",cobranza:"c",visitas:"r"};
+const PREF={ventas:"v",cobranza:"c",visitas:"r",almacen:"a"};
 async function bajar(tipo){
-  const p=await perfil, todos=p.rol==="admin"||p.rol==="supervisor", t=PREF[tipo]+":todos";
+  const p=await perfil, todos=p.rol==="admin"||p.rol==="supervisor"||tipo==="almacen", t=PREF[tipo]+":todos";
+  if(p.rol==="almacen"&&tipo!=="almacen") return new Promise(()=>{}); // el almacén solo ve su pestaña
   let q=sb.from("paquetes").select("clave,contenido").eq("tipo",tipo);
   q=todos?q.eq("clave",t):q.neq("clave",t);
   const {data,error}=await q;
   if(error) throw new Error("No se pudieron cargar tus datos: "+error.message);
-  if(!data.length&&tipo!=="visitas") throw new Error("Tu usuario todavía no tiene "+(tipo==="ventas"?"vendedores":"cobradores")+" asignados.");
+  if(!data.length&&(tipo==="ventas"||tipo==="cobranza")) throw new Error("Tu usuario todavía no tiene "+(tipo==="ventas"?"vendedores":"cobradores")+" asignados.");
   return Promise.all(data.map(r=>abrir(r.contenido)));
 }
 async function abrir(b64){
@@ -221,6 +225,7 @@ function detalleUso(u){
 }
 
 window.FUENTE={
+  almacen:async()=>{const b=await bajar("almacen"); if(!b.length) throw new Error("Todavía no hay pedidos cargados para el almacén."); return JSON.parse(new TextDecoder().decode(b[0]))},
   visitas:async()=>unirVisitas((await bajar("visitas")).map(b=>JSON.parse(new TextDecoder().decode(b)))),
   ventas:async()=>unirVentas((await bajar("ventas")).map(leerVentas)),
   cobranza:async()=>unirCobranza((await bajar("cobranza")).map(b=>JSON.parse(new TextDecoder().decode(b))))

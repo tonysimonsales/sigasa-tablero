@@ -158,6 +158,25 @@ tfoot td:first-child{background:var(--surface-2)}
 .antres b{color:var(--ink);font-family:var(--f-num);font-weight:500}
 @media (max-width:720px){.cresumen{grid-template-columns:1fr 1fr}.ant .r{grid-template-columns:70px 1fr 112px}.ant .r .vl small{display:none}}
 @media (prefers-reduced-motion:no-preference){.barra b{transition:width .25s}}
+/* Almacén */
+input.fecha,input.busq{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;min-height:40px}
+input.busq{flex:1 1 220px;min-width:0}
+#asit{flex-wrap:wrap}
+.sit{display:inline-block;font-size:.72rem;font-weight:600;border-radius:999px;padding:1px 8px;border:1px solid currentColor;white-space:nowrap}
+.sit.s-N{color:var(--bad)} .sit.s-R{color:var(--s2)} .sit.s-S{color:var(--good)} .sit.s-E,.sit.s-C{color:var(--ink-3)}
+.avance{display:inline-block;width:60px;height:6px;background:var(--line-soft);border-radius:3px;vertical-align:middle;margin-right:6px;overflow:hidden}
+.avance b{display:block;height:100%;background:var(--s3)}
+#aped td.cl{white-space:normal;min-width:180px;text-align:left}
+#aped th:nth-child(2){text-align:left}
+.ficha .pt{width:100%;border-collapse:collapse;min-width:0}
+.ficha .pt .sub{display:block;color:var(--ink-3);font-size:.74rem}
+#pAlmacen ~ * .ficha .mini, .ficha .mini{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+.ficha .cuerpo{overflow-x:hidden}
+.ficha .pt th,.ficha .pt td{padding:6px 6px;font-size:.82rem;border-bottom:1px solid var(--line-soft);white-space:normal;position:static}
+.ficha .pt td:first-child,.ficha .pt th:first-child{text-align:left;max-width:none}
+.ficha .pt tr.ok td{color:var(--ink-3)}
+.ficha .pt .falta{color:var(--bad);font-weight:600}
+
 /* Visitas */
 #rplan{width:100%;max-width:100%;text-overflow:ellipsis}
 .rdias{display:none;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:6px}
@@ -243,6 +262,7 @@ tfoot td:first-child{background:var(--surface-2)}
     <button type="button" role="tab" id="tabR" aria-selected="true" aria-controls="pVisitas">Visitas</button>
     <button type="button" role="tab" id="tabV" aria-selected="false" aria-controls="pVentas">Ventas</button>
     <button type="button" role="tab" id="tabC" aria-selected="false" aria-controls="pCobranza">Cobranza</button>
+    <button type="button" role="tab" id="tabA" aria-selected="false" aria-controls="pAlmacen">Almacén</button>
     <button type="button" role="tab" id="tabU" aria-selected="false" aria-controls="pUso" hidden>Uso</button>
   </nav>
   <div id="pVentas" class="pestana" role="tabpanel" aria-labelledby="tabV">
@@ -305,6 +325,28 @@ tfoot td:first-child{background:var(--surface-2)}
       <div class="tabla-w"><table id="ctabla"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
       <div class="mas"><button type="button" class="btn" id="cvermas" hidden>Mostrar más</button></div>
       <p class="aviso">Toca un renglón para filtrar por él. Saldo promedio: promedio del saldo de cada día. Ventas netas sin IVA menos devoluciones. Recuperación = saldo promedio ÷ venta neta diaria. Cobrado: cobros aplicados con IVA (sin devoluciones ni ajustes); la quincena es del 1 al 15 o del 16 a fin de mes. El cobrado se compara contra el mismo periodo del año anterior, hasta el mismo día cuando el mes está en curso.</p>
+    </section>
+  </div>
+  <div id="pAlmacen" class="pestana" role="tabpanel" aria-labelledby="tabA" hidden>
+    <section class="panel controles" aria-label="Filtros de pedidos">
+      <div class="fila">
+        <div class="campo" style="flex:1 1 260px"><label class="etq" for="avia">Vía de embarque</label><select id="avia" style="width:100%"></select></div>
+        <div class="campo"><label class="etq" for="ades">Desde</label><input type="date" id="ades" class="fecha"></div>
+        <div class="campo"><label class="etq" for="ahas">Hasta</label><input type="date" id="ahas" class="fecha"></div>
+      </div>
+      <div class="fila"><div class="seg" role="group" aria-label="Situación" id="asit"></div>
+        <input type="search" id="abus" placeholder="Buscar folio, cliente o artículo" aria-label="Buscar pedido" class="busq"></div>
+    </section>
+    <section class="cresumen" id="aresumen" aria-live="polite"><div class="cargando">Cargando pedidos…</div></section>
+    <section class="panel desg" id="aviaspanel">
+      <div class="ghead"><h2>Por vía de embarque</h2></div>
+      <div class="tabla-w"><table id="avias"><thead></thead><tbody></tbody></table></div>
+    </section>
+    <section class="panel desg">
+      <div class="ghead"><h2 id="atit">Pedidos</h2></div>
+      <div class="tabla-w"><table id="aped"><thead></thead><tbody></tbody></table></div>
+      <div class="mas"><button type="button" class="btn" id="avermas" hidden>Mostrar más</button></div>
+      <p class="aviso" id="anota"></p>
     </section>
   </div>
   <div id="pUso" class="pestana" role="tabpanel" aria-labelledby="tabU" hidden>
@@ -644,7 +686,7 @@ const dec=(v,n)=>v==null||!isFinite(v)?"—":v.toFixed(n);
 const mesTxt=m=>{const[y,mm]=m.split("-");return MESN[+mm-1]+" "+y};
 
 /* Pestañas */
-const tabs=[["tabV","pVentas"],["tabC","pCobranza"],["tabR","pVisitas"],["tabU","pUso"]];
+const tabs=[["tabV","pVentas"],["tabC","pCobranza"],["tabR","pVisitas"],["tabA","pAlmacen"],["tabU","pUso"]];
 let prom=null; const asegurar=()=>prom||(prom=cargar());
 function mostrar(id){
   for(const [t,p] of tabs){const on=t===id;$(t).setAttribute("aria-selected",on);$(p).hidden=!on}
@@ -652,6 +694,7 @@ function mostrar(id){
   if(id==="tabC") asegurar();
   if(id==="tabR"&&window.PANEL.visitas) window.PANEL.visitas();
   if(id==="tabU"&&window.PANEL.uso) window.PANEL.uso();
+  if(id==="tabA"&&window.PANEL.almacen) window.PANEL.almacen();
   window.scrollTo({top:0});
 }
 window.PANEL=window.PANEL||{}; window.PANEL.mostrar=mostrar;
@@ -662,7 +705,7 @@ window.PANEL.cobranzaCliente=async id=>{await asegurar(); if(!C) return false;
 for(const [t] of tabs) $(t).onclick=()=>mostrar(t);
 let ini="tabR"; try{ini=localStorage.getItem("tablero_pestana")||"tabR"}catch(e){}
 if(location.hash==="#cobranza") ini="tabC"; if(location.hash==="#visitas") ini="tabR";
-const arranque=()=>mostrar(tabs.some(t=>t[0]===ini)&&!$(ini).hidden?ini:"tabR");
+const arranque=()=>{const i=window.PANEL.inicio||ini; mostrar(tabs.some(t=>t[0]===i)&&!$(i).hidden?i:"tabR")};
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",arranque); else setTimeout(arranque,0);
 
 let C=null;
@@ -1010,5 +1053,108 @@ async function pintarSug(c){
 function ventanaTxt(){const m=+D.ventana.slice(5),y=+D.ventana.slice(0,4),m2=m%12+1;return MESN[m-1]+"–"+MESN[m2-1]+" "+(m===12?y+1:y)}
 let tAviso; function aviso(m){const a=$("aviso");a.textContent=m;a.hidden=false;clearTimeout(tAviso);tAviso=setTimeout(()=>a.hidden=true,3500)}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("velo").hidden){$("velo").hidden=true;$("velo").innerHTML=""}});
+})();
+</script>
+<script>
+(function(){
+"use strict";
+/* Pestaña Almacén: pedidos por vía de embarque y lo que falta surtir */
+const MESN=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const $=s=>document.getElementById(s);
+const fmt=new Intl.NumberFormat("es-MX",{maximumFractionDigits:0});
+const fu=new Intl.NumberFormat("es-MX",{maximumFractionDigits:2});
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const dinero=v=>(v<0?"−$":"$")+fmt.format(Math.abs(Math.round(v)));
+const fC=s=>{const[y,m,d]=s.split("-");return +d+" "+MESN[+m-1]};
+const SIT={N:"Sin surtir",R:"Parcial",S:"Surtido",E:"Cerrado",C:"Cancelado"};
+const FILT=[["X","Por surtir",["N","R"]],["N","Sin surtir",["N"]],["R","Parciales",["R"]],["S","Surtidos",["S"]],["EC","Cerrados y cancelados",["E","C"]],["T","Todos",["N","R","S","E","C"]]];
+let D=null, prom=null;
+const st={via:-1,des:"",has:"",sit:"X",bus:"",lim:60};
+
+async function cargar(){
+  if(window.FUENTE&&window.FUENTE.almacen) D=await window.FUENTE.almacen();
+  else{const r=await fetch("almacen.json"); if(!r.ok) throw new Error("No se pudieron cargar los pedidos."); D=await r.json();}
+  iniciar();
+}
+window.PANEL=window.PANEL||{};
+window.PANEL.almacen=()=>prom||(prom=cargar().catch(e=>{$("aresumen").innerHTML='<div class="cargando">'+esc(e.message)+"</div>"}));
+
+function iniciar(){
+  for(const id of ["ades","ahas"]){const e=$(id);e.min=D.desde;e.max=D.corte}
+  st.des=D.desde; st.has=D.corte; $("ades").value=st.des; $("ahas").value=st.has;
+  $("ades").onchange=e=>{st.des=e.target.value||D.desde;if(st.des>st.has){st.has=st.des;$("ahas").value=st.has}pintar()};
+  $("ahas").onchange=e=>{st.has=e.target.value||D.corte;if(st.has<st.des){st.des=st.has;$("ades").value=st.des}pintar()};
+  $("avia").onchange=e=>{st.via=+e.target.value;st.lim=60;pintar()};
+  $("asit").innerHTML=FILT.map(f=>'<button type="button" data-k="'+f[0]+'">'+f[1]+"</button>").join("");
+  $("asit").querySelectorAll("button").forEach(b=>b.onclick=()=>{st.sit=b.dataset.k;st.lim=60;pintar()});
+  $("abus").oninput=e=>{st.bus=e.target.value.trim().toLowerCase();st.lim=60;pintarLista()};
+  $("avermas").onclick=()=>{st.lim+=100;pintarLista()};
+  pintar();
+}
+const enRango=p=>p.d>=st.des&&p.d<=st.has;
+const enVia=p=>st.via<0||p.via===st.via;
+const sitOk=()=>FILT.find(f=>f[0]===st.sit)[2];
+function pintar(){
+  for(const b of $("asit").children) b.setAttribute("aria-pressed",b.dataset.k===st.sit);
+  const R=D.pedidos.filter(enRango);
+  // Vías con el número de pedidos por surtir en el rango
+  const cuenta=new Array(D.vias.length).fill(0); R.forEach(p=>{if(p.s==="N"||p.s==="R") cuenta[p.via]++});
+  const ord=D.vias.map((n,i)=>i).sort((a,b)=>cuenta[b]-cuenta[a]||D.vias[a].localeCompare(D.vias[b],"es"));
+  $("avia").innerHTML='<option value="-1">Todas las vías ('+cuenta.reduce((a,b)=>a+b,0)+" por surtir)</option>"+ord.map(i=>'<option value="'+i+'">'+esc(D.vias[i])+" ("+cuenta[i]+")</option>").join("");
+  $("avia").value=st.via;
+  const V=R.filter(enVia), n=k=>V.filter(p=>p.s===k).length, pend=V.filter(p=>p.s==="N"||p.s==="R");
+  const sinEx=pend.reduce((a,p)=>a+p.p.filter(x=>x[4]>0&&x[5]<x[4]).length,0);
+  const tiles=[["Pedidos por surtir",fmt.format(pend.length),"sin surtir o parciales · de "+fmt.format(V.length)+" pedidos"],
+    ["Sin surtir",fmt.format(n("N")),"no tienen nada facturado ni remisionado"],
+    ["Surtidos parcial",fmt.format(n("R")),"tienen algo surtido y falta el resto"],
+    ["Importe por surtir",dinero(pend.reduce((a,p)=>a+p.ip,0)),"sin IVA"],
+    ["Partidas sin existencia",fmt.format(sinEx),"lo pendiente es mayor que la existencia del almacén"],
+    ["Surtidos completos",fmt.format(n("S")),(n("E")+n("C"))+" cerrados o cancelados"]];
+  $("aresumen").innerHTML=tiles.map(([k,m,r])=>'<div class="cifra"><div class="k">'+k+'</div><div class="m">'+m+'</div><div class="ref">'+r+"</div></div>").join("");
+  // Resumen por vía (solo con "todas las vías")
+  $("aviaspanel").hidden=st.via>=0;
+  if(st.via<0){
+    const g=D.vias.map((nm,i)=>({i,nm,N:0,R:0,S:0,ip:0}));
+    R.forEach(p=>{const x=g[p.via]; if(x[p.s]!==undefined) x[p.s]++; if(p.s==="N"||p.s==="R") x.ip+=p.ip});
+    const fs=g.filter(x=>x.N+x.R+x.S>0).sort((a,b)=>(b.N+b.R)-(a.N+a.R)||b.ip-a.ip);
+    const tb=$("avias");
+    tb.tHead.innerHTML="<tr><th>Vía de embarque</th><th>Sin surtir</th><th>Parciales</th><th>Surtidos</th><th>Importe por surtir</th></tr>";
+    tb.tBodies[0].innerHTML=fs.map(x=>'<tr data-i="'+x.i+'"><td>'+esc(x.nm)+'</td><td class="n">'+fmt.format(x.N)+'</td><td class="n">'+fmt.format(x.R)+'</td><td class="n">'+fmt.format(x.S)+'</td><td class="n">'+dinero(x.ip)+"</td></tr>").join("");
+    tb.tBodies[0].querySelectorAll("tr").forEach(tr=>tr.onclick=()=>{st.via=+tr.dataset.i;st.lim=60;pintar();$("pAlmacen").scrollIntoView({behavior:"smooth"})});
+  }
+  pintarLista();
+}
+function pintarLista(){
+  const ok=sitOk(), q=st.bus;
+  let L=D.pedidos.filter(p=>enRango(p)&&enVia(p)&&ok.includes(p.s));
+  if(q) L=L.filter(p=>(p.f+" "+p.c+" "+p.p.map(x=>x[0]+" "+x[1]).join(" ")).toLowerCase().includes(q));
+  L.sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h)); // los más antiguos primero
+  $("atit").textContent=(st.via>=0?D.vias[st.via]+" · ":"")+FILT.find(f=>f[0]===st.sit)[1]+" ("+fmt.format(L.length)+")";
+  const tb=$("aped");
+  tb.tHead.innerHTML="<tr><th>Pedido</th><th>Cliente</th>"+(st.via<0?"<th>Vía</th>":"")+"<th>Situación</th><th>Surtido</th><th>Por surtir</th></tr>";
+  tb.tBodies[0].innerHTML=L.slice(0,st.lim).map(p=>{const pct=p.pu?p.su/p.pu*100:0;
+    return '<tr data-f="'+esc(p.f)+'"><td><b>'+esc(p.f)+'</b><span class="sub">'+fC(p.d)+" "+esc(p.h)+'</span></td><td class="cl">'+esc(p.c)+'<span class="sub">'+esc(p.v)+(p.z?" · "+esc(p.z):"")+"</span></td>"+
+      (st.via<0?"<td>"+esc(D.vias[p.via])+"</td>":"")+'<td><span class="sit s-'+p.s+'">'+SIT[p.s]+"</span></td>"+
+      '<td class="n"><span class="avance"><b style="width:'+pct.toFixed(0)+'%"></b></span>'+pct.toFixed(0)+'%</td><td class="n">'+(p.ip?dinero(p.ip):"—")+"</td></tr>"}).join("")||
+    '<tr><td colspan="6" style="text-align:center;color:var(--ink-3);position:static">Sin pedidos con estos filtros</td></tr>';
+  tb.tBodies[0].querySelectorAll("tr[data-f]").forEach(tr=>tr.onclick=()=>ficha(D.pedidos.find(p=>p.f===tr.dataset.f)));
+  $("avermas").hidden=L.length<=st.lim;
+  $("anota").textContent="Pedidos del "+fC(D.desde)+" al "+fC(D.corte)+" (últimos "+D.dias+" días, datos al cierre del "+fC(D.corte)+"), del más antiguo al más reciente. Surtido = facturado o remisionado. Toca un pedido para ver sus artículos.";
+}
+function ficha(p){
+  const velo=$("velo"), falta=p.p.filter(x=>x[4]>0);
+  velo.innerHTML='<div class="hoja ficha" role="dialog" aria-modal="true" aria-label="Pedido '+esc(p.f)+'"><header><div style="min-width:0"><h3>Pedido '+esc(p.f)+' <span class="sit s-'+p.s+'">'+SIT[p.s]+"</span></h3>"+
+    '<div class="sub2">'+esc(p.c)+" · "+fC(p.d)+" "+esc(p.h)+" · "+esc(D.vias[p.via])+"<br>"+esc(p.v)+(p.z?" · "+esc(p.z):"")+"</div></div>"+
+    '<button type="button" class="link" id="acerrar">Cerrar</button></header><div class="cuerpo">'+
+    '<div class="mini"><div class="cifra"><div class="k">Importe del pedido</div><div class="m">'+dinero(p.i)+'</div><div class="ref">sin IVA</div></div>'+
+    '<div class="cifra"><div class="k">Por surtir</div><div class="m">'+dinero(p.ip)+'</div><div class="ref">'+falta.length+" de "+p.p.length+" partidas</div></div>"+
+    '<div class="cifra"><div class="k">Unidades</div><div class="m">'+fu.format(p.su)+" / "+fu.format(p.pu)+'</div><div class="ref">surtidas / pedidas</div></div></div>'+
+    '<div><table class="pt"><thead><tr><th>Artículo</th><th>Faltan</th><th>Existencia</th></tr></thead><tbody>'+
+    p.p.map(x=>'<tr class="'+(x[4]>0?"":"ok")+'"><td><span class="cl">'+esc(x[0])+"</span> "+esc(x[1])+'<span class="sub">pedidas '+fu.format(x[2])+" · surtidas "+fu.format(x[3])+" "+esc((x[6]||"").toLowerCase())+'</span></td><td class="n'+(x[4]>0?" falta":"")+'">'+(x[4]>0?fu.format(x[4]):"—")+
+      '</td><td class="n'+(x[4]>0&&x[5]<x[4]?" falta":"")+'">'+fu.format(x[5])+"</td></tr>").join("")+"</tbody></table></div>"+
+    '<p class="aviso">Existencia actual del artículo en el almacén del pedido, al cierre del '+fC(D.corte)+'. En rojo: no alcanza para lo que falta.</p></div></div>';
+  velo.hidden=false; const c=()=>{velo.hidden=true;velo.innerHTML=""};
+  $("acerrar").onclick=c; velo.onclick=e=>{if(e.target===velo)c()};
+}
 })();
 </script>
