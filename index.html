@@ -1069,7 +1069,9 @@ const fC=s=>{const[y,m,d]=s.split("-");return +d+" "+MESN[+m-1]};
 const SIT={N:"Sin surtir",R:"Parcial",S:"Surtido",E:"Cerrado",C:"Cancelado"};
 const FILT=[["X","Por surtir",["N","R"]],["N","Sin surtir",["N"]],["R","Parciales",["R"]],["S","Surtidos",["S"]],["EC","Cerrados y cancelados",["E","C"]],["T","Todos",["N","R","S","E","C"]]];
 let D=null, prom=null;
-const st={via:-1,des:"",has:"",sit:"X",bus:"",lim:60};
+const st={via:-1,des:"",has:"",sit:"X",bus:"",lim:60,ord:{col:"d",dir:1}};
+// Orden de la lista de pedidos: columna elegida; empates por fecha y hora
+const ORDEN={d:p=>p.d+" "+p.h,f:p=>p.f,c:p=>p.c,via:p=>D.vias[p.via],s:p=>"NRSEC".indexOf(p.s),pct:p=>p.pu?p.su/p.pu:0,ip:p=>p.ip};
 
 async function cargar(){
   if(window.FUENTE&&window.FUENTE.almacen) D=await window.FUENTE.almacen();
@@ -1128,18 +1130,22 @@ function pintarLista(){
   const ok=sitOk(), q=st.bus;
   let L=D.pedidos.filter(p=>enRango(p)&&enVia(p)&&ok.includes(p.s));
   if(q) L=L.filter(p=>(p.f+" "+p.c+" "+p.p.map(x=>x[0]+" "+x[1]).join(" ")).toLowerCase().includes(q));
-  L.sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h)); // los más antiguos primero
+  const o=st.ord, k=ORDEN[o.col];
+  L.sort((a,b)=>{const x=k(a),y=k(b);const r=typeof x==="string"?x.localeCompare(y,"es"):x-y;return (r||(a.d+a.h).localeCompare(b.d+b.h))*o.dir});
   $("atit").textContent=(st.via>=0?D.vias[st.via]+" · ":"")+FILT.find(f=>f[0]===st.sit)[1]+" ("+fmt.format(L.length)+")";
   const tb=$("aped");
-  tb.tHead.innerHTML="<tr><th>Pedido</th><th>Cliente</th>"+(st.via<0?"<th>Vía</th>":"")+"<th>Situación</th><th>Surtido</th><th>Por surtir</th></tr>";
-  tb.tBodies[0].innerHTML=L.slice(0,st.lim).map(p=>{const pct=p.pu?p.su/p.pu*100:0;
+  const h=(c,t)=>'<th data-col="'+c+'" aria-sort="'+(o.col===c?(o.dir<0?"descending":"ascending"):"none")+'">'+t+(o.col===c?(o.dir<0?" ↓":" ↑"):"")+"</th>";
+  tb.tHead.innerHTML="<tr>"+h("d","Pedido")+h("c","Cliente")+(st.via<0?h("via","Vía"):"")+h("s","Situación")+h("pct","Surtido")+h("ip","Por surtir")+"</tr>";
+  tb.tHead.querySelectorAll("th[data-col]").forEach(th=>th.onclick=()=>{const c=th.dataset.col;
+    st.ord=o.col===c?{col:c,dir:-o.dir}:{col:c,dir:(c==="pct"||c==="ip")?-1:1};st.lim=60;pintarLista()});
+  tb.tBodies[0].innerHTML=L.slice(0,st.lim).map(p=>{const pct=p.pu?(p.su<p.pu?Math.min(99,Math.floor(p.su/p.pu*100)):100):0;
     return '<tr data-f="'+esc(p.f)+'"><td><b>'+esc(p.f)+'</b><span class="sub">'+fC(p.d)+" "+esc(p.h)+'</span></td><td class="cl">'+esc(p.c)+'<span class="sub">'+esc(p.v)+(p.z?" · "+esc(p.z):"")+"</span></td>"+
       (st.via<0?"<td>"+esc(D.vias[p.via])+"</td>":"")+'<td><span class="sit s-'+p.s+'">'+SIT[p.s]+"</span></td>"+
       '<td class="n"><span class="avance"><b style="width:'+pct.toFixed(0)+'%"></b></span>'+pct.toFixed(0)+'%</td><td class="n">'+(p.ip?dinero(p.ip):"—")+"</td></tr>"}).join("")||
     '<tr><td colspan="6" style="text-align:center;color:var(--ink-3);position:static">Sin pedidos con estos filtros</td></tr>';
   tb.tBodies[0].querySelectorAll("tr[data-f]").forEach(tr=>tr.onclick=()=>ficha(D.pedidos.find(p=>p.f===tr.dataset.f)));
   $("avermas").hidden=L.length<=st.lim;
-  $("anota").textContent="Pedidos del "+fC(D.desde)+" al "+fC(D.corte)+" (últimos "+D.dias+" días, datos al cierre del "+fC(D.corte)+"), del más antiguo al más reciente. Surtido = facturado o remisionado. Toca un pedido para ver sus artículos.";
+  $("anota").textContent="Pedidos del "+fC(D.desde)+" al "+fC(D.corte)+" (últimos "+D.dias+" días, datos al cierre del "+fC(D.corte)+"). Toca el título de una columna para ordenar; otra vez para invertir. Surtido = facturado o remisionado. Toca un pedido para ver sus artículos.";
 }
 function ficha(p){
   const velo=$("velo"), falta=p.p.filter(x=>x[4]>0);
