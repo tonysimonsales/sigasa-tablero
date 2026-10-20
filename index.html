@@ -158,21 +158,9 @@ tfoot td:first-child{background:var(--surface-2)}
 .antres b{color:var(--ink);font-family:var(--f-num);font-weight:500}
 @media (max-width:720px){.cresumen{grid-template-columns:1fr 1fr}.ant .r{grid-template-columns:70px 1fr 112px}.ant .r .vl small{display:none}}
 @media (prefers-reduced-motion:no-preference){.barra b{transition:width .25s}}
-/* Concursos */
-#concursos{display:grid;gap:14px}
-.concurso h2{font-family:var(--f-display);font-weight:600;font-size:1.15rem;margin:0}
-.rank-tot{font-size:.9rem;color:var(--ink-2);margin-bottom:8px}
-.rank-tot b{font-size:1.25rem;color:var(--ink);font-weight:500}
-.rank{display:grid;gap:5px}
-.rank .r{display:grid;grid-template-columns:26px minmax(120px,260px) 1fr 80px 100px;gap:10px;align-items:center;font-size:.88rem}
-.rank .pos{color:var(--ink-3);text-align:right;font-size:.8rem}
-.rank .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rank .tr{height:12px;background:var(--line-soft);border-radius:3px;overflow:hidden}
-.rank .tr b{display:block;height:100%;background:var(--s1);border-radius:0 3px 3px 0}
-.rank .pz{text-align:right;font-weight:500}
-.rank .im{text-align:right;color:var(--ink-3);font-size:.8rem}
-.rank .r:first-child .tr b{background:var(--s3)}
-@media (max-width:720px){.rank .r{grid-template-columns:22px 1fr 64px;row-gap:2px}.rank .tr{grid-column:2/4;grid-row:2}.rank .im{display:none}}
+/* Concurso: cuarto cuadro del resumen */
+.resumen.con4{grid-template-columns:1.3fr 1fr 1fr 1fr}
+@media (max-width:980px){.resumen.con4{grid-template-columns:1fr 1fr}.resumen.con4 .cifra.principal{grid-column:1/-1}}
 
 /* Almacén */
 input.fecha,input.busq{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;min-height:40px}
@@ -299,7 +287,6 @@ input.busq{flex:1 1 220px;min-width:0}
   </section>
 
   <section class="resumen" id="resumen" aria-live="polite"></section>
-  <section id="concursos" hidden></section>
 
   <section class="panel graf">
     <div class="ghead"><h2>Ventas netas por mes</h2><div class="leyenda" id="leyenda"></div></div>
@@ -472,26 +459,20 @@ function iniciar(){
     b.onclick=()=>{st.dim=d.k;st.limite=50;st.buscar="";$("buscar").value="";pintar()};ds.appendChild(b)}
   $("buscar").oninput=e=>{st.buscar=e.target.value.trim().toLowerCase();st.limite=50;pintarTabla()};
   $("vermas").onclick=()=>{st.limite+=100;pintarTabla()};
-  pintarConcursos();
   pintar();
 }
 
-/* --- Concursos: rango de fechas fijo, no dependen del periodo ni de los filtros --- */
-function pintarConcursos(){
-  const K=C.concursos||[], box=$("concursos"); if(!K.length){box.hidden=true;return}
-  const fl=s=>{const[y,m,d]=s.split("-");return +d+" "+MESN[+m-1]+" "+y}, fcorta=s=>{const[,m,d]=s.split("-");return +d+" "+MESN[+m-1]};
-  const corte=C.generado_hasta.slice(0,10), fu=new Intl.NumberFormat("es-MX",{maximumFractionDigits:2});
-  box.innerHTML=K.map(k=>{
-    const tot=k.filas.reduce((a,r)=>a+r[2],0), mx=Math.max(1,...k.filas.map(r=>r[2]));
-    const hoy=corte<k.desde?"Inicia el "+fl(k.desde):corte>k.hasta?"Terminó el "+fl(k.hasta):"Datos al "+fl(corte)+" · faltan "+Math.round((new Date(k.hasta)-new Date(corte))/864e5)+" días";
-    return '<div class="panel concurso"><div class="ghead"><h2>'+esc(k.n)+'</h2><span class="aviso">'+esc(hoy)+"</span></div>"+
-      '<p class="aviso" style="margin:0 0 10px">Piezas facturadas del '+fcorta(k.desde)+" al "+fl(k.hasta)+" · "+esc(k.clasif)+": "+esc(k.valor)+(k.arts?" ("+k.arts+" artículos)":"")+"</p>"+
-      (k.error?'<div class="cargando" style="padding:16px 0">'+esc(k.error)+"</div>":
-       !k.filas.length?'<div class="cargando" style="padding:16px 0">Aún no hay piezas facturadas en el concurso.</div>':
-       '<div class="rank-tot"><b class="num">'+fu.format(tot)+'</b> piezas en total · '+k.filas.length+" vendedores</div>"+
-       '<div class="rank">'+k.filas.map((r,i)=>'<div class="r"><span class="pos num">'+(i+1)+'</span><span class="nm" title="'+esc(r[1])+'">'+esc(r[1])+'</span><span class="tr"><b style="width:'+(Math.max(0,r[2])/mx*100).toFixed(1)+'%"></b></span><span class="pz num">'+fu.format(r[2])+'</span><span class="im num">'+dinero(r[3])+"</span></div>").join("")+"</div>")+
-      '<p class="aviso">Facturas y ventas de mostrador menos devoluciones, sin cancelados; vendedor del documento. No cambia con el periodo ni con los filtros.</p></div>'}).join("");
-  box.hidden=false;
+/* --- Concursos: cuadro con las piezas del rango fijo; no depende del periodo; sí respeta el filtro de vendedor --- */
+function cuadrosConcurso(){
+  const K=C.concursos||[]; if(!K.length) return "";
+  const fu=new Intl.NumberFormat("es-MX",{maximumFractionDigits:0}), fc=s=>{const[,m,d]=s.split("-");return +d+" "+MESN[+m-1]};
+  const corte=C.generado_hasta.slice(0,10), ids=C._ids&&C._ids.vendedores, fv=st.f.vendedor;
+  const sel=fv.size&&ids?new Set([...fv].map(i=>ids[i])):null;
+  return K.map(k=>{
+    const pz=k.filas.filter(r=>!sel||sel.has(r[0])).reduce((a,r)=>a+r[2],0);
+    const est=corte<k.desde?"inicia el "+fc(k.desde):corte>k.hasta?"terminó":"faltan "+Math.round((new Date(k.hasta)-new Date(corte))/864e5)+" días";
+    return '<div class="cifra"><div class="k"><i style="background:var(--good)"></i>'+esc(k.n)+'</div><div class="per">'+fc(k.desde)+" – "+fc(k.hasta)+" · "+est+'</div>'+
+      '<div class="m">'+(k.error?"—":fu.format(pz))+'</div><div class="aviso">'+(k.error?esc(k.error):"piezas vendidas"+(sel?" · vendedores filtrados":""))+"</div></div>"}).join("");
 }
 
 /* --- Periodos --- */
@@ -588,7 +569,8 @@ function pintarResumen(){
     const extra=s===0?"":(ok?variacion(R.tot[0],R.tot[s],true)+' <span class="aviso">vs periodo</span>':'<span class="aviso">'+(R.disp[s].parcial?"Datos incompletos para este periodo":"Sin datos para este periodo")+"</span>");
     return '<div class="cifra'+(s===0?" principal":"")+'"><div class="k"><i style="background:var('+cols[s]+')"></i>'+p.et+'</div>'+
       '<div class="per">'+(per||"—")+'</div><div class="m">'+(ok||s===0?dinero(R.tot[s]):"—")+"</div>"+(extra?"<div>"+extra+"</div>":"")+"</div>";
-  }).join("");
+  }).join("")+cuadrosConcurso();
+  $("resumen").classList.toggle("con4",!!(C.concursos&&C.concursos.length));
 }
 function pintarGrafica(){
   const M=C.meses, cols=["--s1","--s2","--s3"], k=R.k;
