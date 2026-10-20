@@ -330,10 +330,11 @@ input.busq{flex:1 1 220px;min-width:0}
   <div id="pAlmacen" class="pestana" role="tabpanel" aria-labelledby="tabA" hidden>
     <section class="panel controles" aria-label="Filtros de pedidos">
       <div class="fila">
-        <div class="campo" style="flex:1 1 260px"><label class="etq" for="avia">Vía de embarque</label><select id="avia" style="width:100%"></select></div>
+        <div class="campo" style="flex:1 1 260px"><span class="etq">Vía de embarque</span><button type="button" class="fbtn" id="avia" style="width:100%"><span class="v">Todas las vías</span></button></div>
         <div class="campo"><label class="etq" for="ades">Desde</label><input type="date" id="ades" class="fecha"></div>
         <div class="campo"><label class="etq" for="ahas">Hasta</label><input type="date" id="ahas" class="fecha"></div>
       </div>
+      <div class="chips" id="achips" hidden></div>
       <div class="fila"><div class="seg" role="group" aria-label="Situación" id="asit"></div>
         <input type="search" id="abus" placeholder="Buscar folio, cliente o artículo" aria-label="Buscar pedido" class="busq"></div>
     </section>
@@ -1069,7 +1070,7 @@ const fC=s=>{const[y,m,d]=s.split("-");return +d+" "+MESN[+m-1]};
 const SIT={N:"Sin surtir",R:"Parcial",S:"Surtido",E:"Cerrado",C:"Cancelado"};
 const FILT=[["X","Por surtir",["N","R"]],["N","Sin surtir",["N"]],["R","Parciales",["R"]],["S","Surtidos",["S"]],["EC","Cerrados y cancelados",["E","C"]],["T","Todos",["N","R","S","E","C"]]];
 let D=null, prom=null;
-const st={via:-1,des:"",has:"",sit:"X",bus:"",lim:60,ord:{col:"d",dir:1}};
+const st={via:new Set(),des:"",has:"",sit:"X",bus:"",lim:60,ord:{col:"d",dir:1}};
 // Orden de la lista de pedidos: columna elegida; empates por fecha y hora
 const ORDEN={d:p=>p.d+" "+p.h,f:p=>p.f,c:p=>p.c,via:p=>D.vias[p.via],s:p=>"NRSEC".indexOf(p.s),pct:p=>p.pu?p.su/p.pu:0,ip:p=>p.ip};
 
@@ -1086,7 +1087,7 @@ function iniciar(){
   st.des=D.desde; st.has=D.corte; $("ades").value=st.des; $("ahas").value=st.has;
   $("ades").onchange=e=>{st.des=e.target.value||D.desde;if(st.des>st.has){st.has=st.des;$("ahas").value=st.has}pintar()};
   $("ahas").onchange=e=>{st.has=e.target.value||D.corte;if(st.has<st.des){st.des=st.has;$("ades").value=st.des}pintar()};
-  $("avia").onchange=e=>{st.via=+e.target.value;st.lim=60;pintar()};
+  $("avia").onclick=selectorVias;
   $("asit").innerHTML=FILT.map(f=>'<button type="button" data-k="'+f[0]+'">'+f[1]+"</button>").join("");
   $("asit").querySelectorAll("button").forEach(b=>b.onclick=()=>{st.sit=b.dataset.k;st.lim=60;pintar()});
   $("abus").oninput=e=>{st.bus=e.target.value.trim().toLowerCase();st.lim=60;pintarLista()};
@@ -1094,16 +1095,23 @@ function iniciar(){
   pintar();
 }
 const enRango=p=>p.d>=st.des&&p.d<=st.has;
-const enVia=p=>st.via<0||p.via===st.via;
+const enVia=p=>!st.via.size||st.via.has(p.via);
+let cuentaVias=[];
 const sitOk=()=>FILT.find(f=>f[0]===st.sit)[2];
 function pintar(){
   for(const b of $("asit").children) b.setAttribute("aria-pressed",b.dataset.k===st.sit);
   const R=D.pedidos.filter(enRango);
   // Vías con el número de pedidos por surtir en el rango
   const cuenta=new Array(D.vias.length).fill(0); R.forEach(p=>{if(p.s==="N"||p.s==="R") cuenta[p.via]++});
-  const ord=D.vias.map((n,i)=>i).sort((a,b)=>cuenta[b]-cuenta[a]||D.vias[a].localeCompare(D.vias[b],"es"));
-  $("avia").innerHTML='<option value="-1">Todas las vías ('+cuenta.reduce((a,b)=>a+b,0)+" por surtir)</option>"+ord.map(i=>'<option value="'+i+'">'+esc(D.vias[i])+" ("+cuenta[i]+")</option>").join("");
-  $("avia").value=st.via;
+  cuentaVias=cuenta;
+  const nv=st.via.size, b=$("avia"); b.classList.toggle("on",nv>0);
+  b.querySelector(".v").textContent=nv===0?"Todas las vías ("+fmt.format(cuenta.reduce((a,c)=>a+c,0))+" por surtir)":nv===1?D.vias[[...st.via][0]]:nv+" vías seleccionadas";
+  const ch=$("achips"); ch.innerHTML="";
+  [...st.via].sort((a,c)=>D.vias[a].localeCompare(D.vias[c],"es")).forEach(i=>{const c=document.createElement("span");c.className="chip";
+    c.innerHTML="<small>Vía</small><span>"+esc(D.vias[i])+'</span><button type="button" aria-label="Quitar">✕</button>';
+    c.querySelector("button").onclick=()=>{st.via.delete(i);st.lim=60;pintar()}; ch.appendChild(c)});
+  if(nv>1){const l=document.createElement("button");l.type="button";l.className="link";l.textContent="Quitar todas";l.onclick=()=>{st.via.clear();pintar()};ch.appendChild(l)}
+  ch.hidden=nv===0;
   const V=R.filter(enVia), n=k=>V.filter(p=>p.s===k).length, pend=V.filter(p=>p.s==="N"||p.s==="R");
   const sinEx=pend.reduce((a,p)=>a+p.p.filter(x=>x[4]>0&&x[5]<x[4]).length,0);
   const tiles=[["Pedidos por surtir",fmt.format(pend.length),"sin surtir o parciales · de "+fmt.format(V.length)+" pedidos"],
@@ -1114,15 +1122,15 @@ function pintar(){
     ["Surtidos completos",fmt.format(n("S")),(n("E")+n("C"))+" cerrados o cancelados"]];
   $("aresumen").innerHTML=tiles.map(([k,m,r])=>'<div class="cifra"><div class="k">'+k+'</div><div class="m">'+m+'</div><div class="ref">'+r+"</div></div>").join("");
   // Resumen por vía (solo con "todas las vías")
-  $("aviaspanel").hidden=st.via>=0;
-  if(st.via<0){
+  $("aviaspanel").hidden=st.via.size===1;
+  if(st.via.size!==1){
     const g=D.vias.map((nm,i)=>({i,nm,N:0,R:0,S:0,ip:0}));
-    R.forEach(p=>{const x=g[p.via]; if(x[p.s]!==undefined) x[p.s]++; if(p.s==="N"||p.s==="R") x.ip+=p.ip});
+    R.filter(enVia).forEach(p=>{const x=g[p.via]; if(x[p.s]!==undefined) x[p.s]++; if(p.s==="N"||p.s==="R") x.ip+=p.ip});
     const fs=g.filter(x=>x.N+x.R+x.S>0).sort((a,b)=>(b.N+b.R)-(a.N+a.R)||b.ip-a.ip);
     const tb=$("avias");
     tb.tHead.innerHTML="<tr><th>Vía de embarque</th><th>Sin surtir</th><th>Parciales</th><th>Surtidos</th><th>Importe por surtir</th></tr>";
     tb.tBodies[0].innerHTML=fs.map(x=>'<tr data-i="'+x.i+'"><td>'+esc(x.nm)+'</td><td class="n">'+fmt.format(x.N)+'</td><td class="n">'+fmt.format(x.R)+'</td><td class="n">'+fmt.format(x.S)+'</td><td class="n">'+dinero(x.ip)+"</td></tr>").join("");
-    tb.tBodies[0].querySelectorAll("tr").forEach(tr=>tr.onclick=()=>{st.via=+tr.dataset.i;st.lim=60;pintar();$("pAlmacen").scrollIntoView({behavior:"smooth"})});
+    tb.tBodies[0].querySelectorAll("tr").forEach(tr=>tr.onclick=()=>{st.via=new Set([+tr.dataset.i]);st.lim=60;pintar();$("pAlmacen").scrollIntoView({behavior:"smooth"})});
   }
   pintarLista();
 }
@@ -1132,20 +1140,37 @@ function pintarLista(){
   if(q) L=L.filter(p=>(p.f+" "+p.c+" "+p.p.map(x=>x[0]+" "+x[1]).join(" ")).toLowerCase().includes(q));
   const o=st.ord, k=ORDEN[o.col];
   L.sort((a,b)=>{const x=k(a),y=k(b);const r=typeof x==="string"?x.localeCompare(y,"es"):x-y;return (r||(a.d+a.h).localeCompare(b.d+b.h))*o.dir});
-  $("atit").textContent=(st.via>=0?D.vias[st.via]+" · ":"")+FILT.find(f=>f[0]===st.sit)[1]+" ("+fmt.format(L.length)+")";
+  $("atit").textContent=(st.via.size===1?D.vias[[...st.via][0]]+" · ":st.via.size>1?st.via.size+" vías · ":"")+FILT.find(f=>f[0]===st.sit)[1]+" ("+fmt.format(L.length)+")";
   const tb=$("aped");
   const h=(c,t)=>'<th data-col="'+c+'" aria-sort="'+(o.col===c?(o.dir<0?"descending":"ascending"):"none")+'">'+t+(o.col===c?(o.dir<0?" ↓":" ↑"):"")+"</th>";
-  tb.tHead.innerHTML="<tr>"+h("d","Pedido")+h("c","Cliente")+(st.via<0?h("via","Vía"):"")+h("s","Situación")+h("pct","Surtido")+h("ip","Por surtir")+"</tr>";
+  tb.tHead.innerHTML="<tr>"+h("d","Pedido")+h("c","Cliente")+(st.via.size!==1?h("via","Vía"):"")+h("s","Situación")+h("pct","Surtido")+h("ip","Por surtir")+"</tr>";
   tb.tHead.querySelectorAll("th[data-col]").forEach(th=>th.onclick=()=>{const c=th.dataset.col;
     st.ord=o.col===c?{col:c,dir:-o.dir}:{col:c,dir:(c==="pct"||c==="ip")?-1:1};st.lim=60;pintarLista()});
   tb.tBodies[0].innerHTML=L.slice(0,st.lim).map(p=>{const pct=p.pu?(p.su<p.pu?Math.min(99,Math.floor(p.su/p.pu*100)):100):0;
     return '<tr data-f="'+esc(p.f)+'"><td><b>'+esc(p.f)+'</b><span class="sub">'+fC(p.d)+" "+esc(p.h)+'</span></td><td class="cl">'+esc(p.c)+'<span class="sub">'+esc(p.v)+(p.z?" · "+esc(p.z):"")+"</span></td>"+
-      (st.via<0?"<td>"+esc(D.vias[p.via])+"</td>":"")+'<td><span class="sit s-'+p.s+'">'+SIT[p.s]+"</span></td>"+
+      (st.via.size!==1?"<td>"+esc(D.vias[p.via])+"</td>":"")+'<td><span class="sit s-'+p.s+'">'+SIT[p.s]+"</span></td>"+
       '<td class="n"><span class="avance"><b style="width:'+pct.toFixed(0)+'%"></b></span>'+pct.toFixed(0)+'%</td><td class="n">'+(p.ip?dinero(p.ip):"—")+"</td></tr>"}).join("")||
     '<tr><td colspan="6" style="text-align:center;color:var(--ink-3);position:static">Sin pedidos con estos filtros</td></tr>';
   tb.tBodies[0].querySelectorAll("tr[data-f]").forEach(tr=>tr.onclick=()=>ficha(D.pedidos.find(p=>p.f===tr.dataset.f)));
   $("avermas").hidden=L.length<=st.lim;
   $("anota").textContent="Pedidos del "+fC(D.desde)+" al "+fC(D.corte)+" (últimos "+D.dias+" días, datos al cierre del "+fC(D.corte)+"). Toca el título de una columna para ordenar; otra vez para invertir. Surtido = facturado o remisionado. Toca un pedido para ver sus artículos.";
+}
+/* Selector de vías: varias a la vez, en orden alfabético (como los filtros de Ventas) */
+function selectorVias(){
+  const velo=$("velo"), sel=new Set(st.via), todas=D.vias.map((n,i)=>({i,n})).sort((a,b)=>a.n.localeCompare(b.n,"es"));
+  velo.innerHTML='<div class="hoja" role="dialog" aria-modal="true" aria-label="Filtrar por vía de embarque"><header><h3>Vías de embarque</h3><button type="button" class="link" id="avcerrar">Cerrar</button></header>'+
+    '<div class="bus"><input type="search" id="avbus" placeholder="Buscar vía" autocomplete="off"></div><ul id="avlista"></ul>'+
+    '<div class="pie"><button type="button" class="link" id="avlimpiar">Quitar selección</button><button type="button" class="prim" id="avaplicar">Aplicar</button></div></div>';
+  velo.hidden=false;
+  const lista=$("avlista"), bus=$("avbus");
+  const pintarL=()=>{const q=bus.value.trim().toLowerCase();
+    lista.innerHTML=todas.filter(o=>!q||o.n.toLowerCase().includes(q)).map(o=>'<li><label><input type="checkbox" value="'+o.i+'"'+(sel.has(o.i)?" checked":"")+'><span class="tx">'+esc(o.n)+'</span><span class="cl" style="margin-left:auto">'+fmt.format(cuentaVias[o.i]||0)+" por surtir</span></label></li>").join("")||'<li class="nota">Sin coincidencias</li>'};
+  lista.onchange=e=>{const i=+e.target.value;e.target.checked?sel.add(i):sel.delete(i)};
+  bus.oninput=pintarL; pintarL(); setTimeout(()=>bus.focus(),30);
+  const cerrar=()=>{velo.hidden=true;velo.innerHTML=""};
+  $("avcerrar").onclick=cerrar; velo.onclick=e=>{if(e.target===velo)cerrar()};
+  $("avlimpiar").onclick=()=>{sel.clear();pintarL()};
+  $("avaplicar").onclick=()=>{st.via=sel;st.lim=60;cerrar();pintar()};
 }
 function ficha(p){
   const velo=$("velo"), falta=p.p.filter(x=>x[4]>0);
