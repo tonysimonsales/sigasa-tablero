@@ -96,6 +96,10 @@ function unirVentas(ps){
     const a=unir(p,"articulos",x=>[x[0],x[1],x[2]<0?-1:l[x[2]]]);
     const v=unir(p,"vendedores",x=>x), m=p.C.meses.map(x=>im.get(x));
     N+=p.N; return {c,a,v,m}});
+  // concursos: unir renglones por vendedor
+  R.concursos=(ps[0].C.concursos||[]).map((k,j)=>{const m=new Map();
+    for(const p of ps) for(const r of ((p.C.concursos||[])[j]||{filas:[]}).filas) m.set(r[0],r);
+    return Object.assign({},k,{filas:[...m.values()].sort((a,b)=>b[2]-a[2])})});
   if(R.vendedores.length>255||R.clientes.length>65535||R.articulos.length>65535) throw new Error("Demasiados datos para unir.");
   const buf=new ArrayBuffer(4+10*N), dv=new DataView(buf); dv.setUint32(0,N,true);
   const X=new Int32Array(buf,4,N), CL=new Uint16Array(buf,4+4*N,N), AR=new Uint16Array(buf,4+6*N,N),
