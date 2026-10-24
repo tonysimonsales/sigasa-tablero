@@ -158,6 +158,50 @@ tfoot td:first-child{background:var(--surface-2)}
 .antres b{color:var(--ink);font-family:var(--f-num);font-weight:500}
 @media (max-width:720px){.cresumen{grid-template-columns:1fr 1fr}.ant .r{grid-template-columns:70px 1fr 112px}.ant .r .vl small{display:none}}
 @media (prefers-reduced-motion:no-preference){.barra b{transition:width .25s}}
+/* Devoluciones */
+.badge{display:inline-block;min-width:20px;padding:0 6px;border-radius:999px;background:var(--bad);color:#fff;font-size:.72rem;font-family:var(--f-num);line-height:18px;text-align:center;vertical-align:2px}
+.dvistas{flex-wrap:wrap;align-self:start}
+.dvaviso{border:1px solid var(--s2);background:color-mix(in srgb,var(--s2) 10%,var(--surface));border-radius:var(--r);padding:10px 14px;font-size:.9rem}
+.dvaviso b{font-family:var(--f-num)}
+.dvform{display:grid;gap:16px}
+.dpaso{display:grid;gap:6px}
+.dbus{width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;min-height:44px;font-size:16px}
+.dres{display:grid;gap:4px;max-height:300px;overflow:auto;margin-top:4px}
+.dres button{display:flex;justify-content:space-between;gap:10px;text-align:left;border:1px solid var(--line-soft);background:var(--surface-2);border-radius:var(--r);padding:8px 10px;cursor:pointer;min-height:44px;align-items:center}
+.dres button:hover{border-color:var(--accent)}
+.dres .cl,.dsel .cl{color:var(--ink-3);font-family:var(--f-num);font-size:.78rem;white-space:nowrap}
+.dres small{color:var(--ink-3);font-size:.76rem;display:block}
+.dsel{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid var(--accent);background:var(--accent-soft);border-radius:var(--r);padding:8px 12px}
+.dsel b{font-weight:600}
+.dsub{font-size:.8rem;color:var(--ink-3);margin:6px 0 2px}
+.dfacs{display:grid;gap:4px}
+.dfacs label{display:flex;gap:10px;align-items:center;border:1px solid var(--line-soft);border-radius:var(--r);padding:8px 10px;cursor:pointer}
+.dfacs label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.cant{display:flex;gap:8px;align-items:center}
+.cant input{width:120px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;min-height:44px;font-size:16px}
+textarea{width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;font:inherit;color:inherit;resize:vertical}
+.dwarn{color:var(--s2);font-size:.86rem}
+.acc{display:flex;gap:8px;flex-wrap:wrap}
+#dlista{display:grid;gap:10px}
+.dv{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:var(--r);padding:12px 14px;display:grid;gap:8px}
+.dv.e-por_recibir{border-left-color:var(--s1)} .dv.e-recibida{border-left-color:var(--s2)} .dv.e-nota{border-left-color:var(--s3)} .dv.e-cerrada{border-left-color:var(--good)} .dv.e-cancelada{border-left-color:var(--ink-3);opacity:.75}
+.dv .top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+.dv .top b{font-size:1rem}
+.dv .det{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:4px 14px;font-size:.86rem}
+.dv .det span{color:var(--ink-3)}
+.dv .det div{min-width:0}
+.dv .lin{font-size:.78rem;color:var(--ink-3)}
+.dest{display:inline-block;font-size:.72rem;font-weight:600;border-radius:999px;padding:1px 8px;border:1px solid currentColor;white-space:nowrap}
+.dest.e-por_recibir{color:var(--s1)} .dest.e-recibida{color:var(--s2)} .dest.e-nota{color:var(--s3)} .dest.e-cerrada{color:var(--good)} .dest.e-cancelada{color:var(--ink-3)}
+.dnota{border:1px dashed var(--s2);border-radius:var(--r);padding:10px;display:grid;gap:8px;background:var(--surface-2)}
+.dnota .fila input{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;min-height:42px;font-size:16px;text-transform:uppercase}
+.checks{display:grid;gap:6px}
+.checks label{display:flex;gap:10px;align-items:center;font-size:.92rem;cursor:pointer;padding:4px 0}
+.checks input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none}
+.cond{display:flex;gap:8px;flex-wrap:wrap}
+.cond label{border:1px solid var(--line);border-radius:var(--r);padding:8px 12px;cursor:pointer;display:flex;gap:8px;align-items:center}
+.cond label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+
 /* Concurso: cuarto cuadro del resumen */
 .resumen.con4{grid-template-columns:1.3fr 1fr 1fr 1fr}
 @media (max-width:980px){.resumen.con4{grid-template-columns:1fr 1fr}.resumen.con4 .cifra.principal{grid-column:1/-1}}
@@ -267,6 +311,7 @@ input.busq{flex:1 1 220px;min-width:0}
     <button type="button" role="tab" id="tabV" aria-selected="false" aria-controls="pVentas">Ventas</button>
     <button type="button" role="tab" id="tabC" aria-selected="false" aria-controls="pCobranza">Cobranza</button>
     <button type="button" role="tab" id="tabA" aria-selected="false" aria-controls="pAlmacen">Almacén</button>
+    <button type="button" role="tab" id="tabD" aria-selected="false" aria-controls="pDevol" hidden>Devoluciones <span class="badge" id="dbadge" hidden></span></button>
     <button type="button" role="tab" id="tabU" aria-selected="false" aria-controls="pUso" hidden>Uso</button>
   </nav>
   <div id="pVentas" class="pestana" role="tabpanel" aria-labelledby="tabV">
@@ -353,6 +398,29 @@ input.busq{flex:1 1 220px;min-width:0}
       <div class="mas"><button type="button" class="btn" id="avermas" hidden>Mostrar más</button></div>
       <p class="aviso" id="anota"></p>
     </section>
+  </div>
+  <div id="pDevol" class="pestana" role="tabpanel" aria-labelledby="tabD" hidden>
+    <div class="seg dvistas" role="group" aria-label="Vista" id="dvistas">
+      <button type="button" data-v="nueva">Nueva</button><button type="button" data-v="pend">Pendientes</button><button type="button" data-v="hist">Historial</button>
+    </div>
+    <div class="dvaviso" id="dvaviso" hidden></div>
+    <section class="panel dvform" id="dnueva" hidden>
+      <div class="dpaso"><span class="etq">1 · Cliente</span><div id="dcli"></div></div>
+      <div class="dpaso" id="dpart" hidden><span class="etq">2 · Artículo a devolver</span><div id="dart"></div></div>
+      <div class="dpaso" id="dpfac" hidden><span class="etq">3 · Factura</span><div id="dfac"></div></div>
+      <div class="dpaso" id="dpcan" hidden><span class="etq">4 · Cantidad y motivo</span>
+        <div class="fila">
+          <div class="campo"><label class="etq" for="dcant">Cantidad</label><div class="cant"><input type="number" id="dcant" min="0" step="any" inputmode="decimal"><span id="duni"></span></div></div>
+          <div class="campo" style="flex:1 1 220px"><label class="etq" for="dmot">Motivo</label><select id="dmot" style="width:100%">
+            <option value="">Elige el motivo…</option><option>El cliente no lo quiso</option><option>Producto defectuoso</option><option>No es lo que pidió</option>
+            <option>Error de surtido</option><option>Llegó dañado</option><option>Otro</option></select></div>
+        </div>
+        <div class="campo"><label class="etq" for="dcom">Comentario (opcional)</label><textarea id="dcom" rows="2" placeholder="Detalle de la falla, quién la trae, etc."></textarea></div>
+        <div id="dwarn" class="dwarn" hidden></div>
+        <div class="acc"><button type="button" class="prim" id="dguardar">Registrar devolución</button></div>
+      </div>
+    </section>
+    <section id="dlista"></section>
   </div>
   <div id="pUso" class="pestana" role="tabpanel" aria-labelledby="tabU" hidden>
     <section class="panel controles" aria-label="Periodo de uso">
@@ -705,7 +773,7 @@ const dec=(v,n)=>v==null||!isFinite(v)?"—":v.toFixed(n);
 const mesTxt=m=>{const[y,mm]=m.split("-");return MESN[+mm-1]+" "+y};
 
 /* Pestañas */
-const tabs=[["tabV","pVentas"],["tabC","pCobranza"],["tabR","pVisitas"],["tabA","pAlmacen"],["tabU","pUso"]];
+const tabs=[["tabV","pVentas"],["tabC","pCobranza"],["tabR","pVisitas"],["tabA","pAlmacen"],["tabD","pDevol"],["tabU","pUso"]];
 let prom=null; const asegurar=()=>prom||(prom=cargar());
 function mostrar(id){
   for(const [t,p] of tabs){const on=t===id;$(t).setAttribute("aria-selected",on);$(p).hidden=!on}
@@ -714,6 +782,7 @@ function mostrar(id){
   if(id==="tabR"&&window.PANEL.visitas) window.PANEL.visitas();
   if(id==="tabU"&&window.PANEL.uso) window.PANEL.uso();
   if(id==="tabA"&&window.PANEL.almacen) window.PANEL.almacen();
+  if(id==="tabD"&&window.PANEL.devoluciones) window.PANEL.devoluciones();
   window.scrollTo({top:0});
 }
 window.PANEL=window.PANEL||{}; window.PANEL.mostrar=mostrar;
@@ -1204,6 +1273,190 @@ function ficha(p){
     '<p class="aviso">Existencia actual del artículo en el almacén del pedido, al cierre del '+fC(D.corte)+'. En rojo: no alcanza para lo que falta.</p></div></div>';
   velo.hidden=false; const c=()=>{velo.hidden=true;velo.innerHTML=""};
   $("acerrar").onclick=c; velo.onclick=e=>{if(e.target===velo)c()};
+}
+})();
+</script>
+<script>
+(function(){
+"use strict";
+/* Pestaña Devoluciones (solo en la página web con usuario): captura → recepción → nota de crédito → destino */
+const MESN=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const $=s=>document.getElementById(s);
+const fmt=new Intl.NumberFormat("es-MX",{maximumFractionDigits:2});
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const dinero=v=>v==null?"—":"$"+new Intl.NumberFormat("es-MX",{minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
+const fD=s=>{if(!s)return"—";const d=new Date(s.length<=10?s+"T12:00:00":s);return d.getDate()+" "+MESN[d.getMonth()]+(d.getFullYear()!==new Date().getFullYear()?" "+d.getFullYear():"")};
+const fH=s=>{if(!s)return"";const d=new Date(s);return fD(s)+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
+const EST={por_recibir:"Por recibir",recibida:"Recibida · falta nota",nota:"Nota generada · por acomodar",cerrada:"Cerrada",cancelada:"Cancelada"};
+let rpc=null, rol="", vista="nueva", lista=[], prom=null;
+const F={cli:null,art:null,fac:null,facs:[]};
+const puede=r=>r.includes(rol);
+
+async function llamar(fn,args){const {data,error}=await rpc(fn,args||{}); if(error) throw new Error(error.message); return data}
+function aviso(m){const a=$("aviso");a.textContent=m;a.hidden=false;clearTimeout(aviso.t);aviso.t=setTimeout(()=>a.hidden=true,3500)}
+
+window.PANEL=window.PANEL||{};
+window.PANEL.devolucionesIniciar=(fRpc,r)=>{rpc=fRpc; rol=r; $("tabD").hidden=false; cargarLista().catch(()=>{})};
+window.PANEL.devoluciones=()=>prom||(prom=iniciar());
+
+async function iniciar(){
+  $("dvistas").querySelectorAll("button").forEach(b=>b.onclick=()=>{vista=b.dataset.v;pintar()});
+  if(puede(["admin","almacen"])) vista="pend";
+  pintarCliente(); $("dguardar").onclick=guardar;
+  $("dcant").oninput=revisarCant;
+  await cargarLista(); pintar();
+}
+async function cargarLista(){
+  lista=await llamar("dv_lista",{desde:new Date(Date.now()-60*864e5).toISOString()});
+  const pend=lista.filter(d=>puede(["admin","almacen"])?["por_recibir","recibida","nota"].includes(d.estado):d.estado==="por_recibir");
+  const b=$("dbadge"); b.textContent=pend.length; b.hidden=!pend.length;
+}
+function pintar(){
+  for(const b of $("dvistas").children){b.setAttribute("aria-pressed",b.dataset.v===vista);
+    if(b.dataset.v==="pend"){const n=lista.filter(d=>["por_recibir","recibida","nota"].includes(d.estado)).length;b.textContent="Pendientes"+(n?" ("+n+")":"")}}
+  $("dnueva").hidden=vista!=="nueva";
+  // Aviso para almacén: lo que espera acción
+  const n=k=>lista.filter(d=>d.estado===k).length;
+  const av=$("dvaviso");
+  if(puede(["admin","almacen"])&&(n("por_recibir")+n("recibida")+n("nota"))){
+    av.innerHTML="<b>"+n("por_recibir")+"</b> por recibir · <b>"+n("recibida")+"</b> esperando nota de crédito · <b>"+n("nota")+"</b> por acomodar o separar";av.hidden=false;
+  } else av.hidden=true;
+  if(vista==="nueva"){$("dlista").innerHTML="";return}
+  const ver=lista.filter(d=>vista==="pend"?["por_recibir","recibida","nota"].includes(d.estado):["cerrada","cancelada"].includes(d.estado));
+  // Pendientes: primero lo que espera nota (Alan), luego por recibir, luego por acomodar
+  const orden={recibida:0,por_recibir:1,nota:2,cerrada:3,cancelada:4};
+  if(vista==="pend") ver.sort((a,b)=>orden[a.estado]-orden[b.estado]||a.creado.localeCompare(b.creado));
+  $("dlista").innerHTML=ver.map(tarjeta).join("")||'<div class="panel cargando">'+(vista==="pend"?"No hay devoluciones pendientes.":"Sin devoluciones cerradas en los últimos 60 días.")+"</div>";
+  $("dlista").querySelectorAll("[data-acc]").forEach(b=>b.onclick=()=>accion(b.dataset.acc,b.dataset.id));
+}
+function tarjeta(d){
+  const imp=(d.cantidad_recibida??d.cantidad)*(d.precio_unitario||0);
+  let acc="";
+  if(d.estado==="por_recibir"&&puede(["admin","almacen"])) acc+='<button type="button" class="prim" data-acc="recibir" data-id="'+d.id+'">Recibir mercancía</button>';
+  if(d.estado==="recibida"&&puede(["admin","almacen"])) acc+='<div class="dnota"><b>Generar la devolución de venta en Microsip</b>'+
+      '<div>Cliente: <b>'+esc(d.cliente_nombre)+"</b> · Factura <b>"+esc(d.factura_folio||"sin factura")+"</b>"+(d.factura_fecha?" del "+fD(d.factura_fecha):"")+
+      "<br>Artículo: <b>"+esc(d.articulo_clave||"")+" "+esc(d.articulo_nombre)+"</b> · Cantidad recibida: <b>"+fmt.format(d.cantidad_recibida??d.cantidad)+" "+esc((d.unidad||"").toLowerCase())+"</b>"+
+      (d.precio_unitario?" · a "+dinero(d.precio_unitario)+" = <b>"+dinero(imp)+"</b> sin IVA":"")+"<br>Condición: <b>"+(d.condicion==="defectuosa"?"Defectuosa":"Buena")+"</b> · Motivo: "+esc(d.motivo)+"</div>"+
+      '<div class="fila"><input type="text" id="fol_'+d.id+'" placeholder="Folio (NF0074850)" autocomplete="off"><button type="button" class="prim" data-acc="nota" data-id="'+d.id+'">Registrar nota de crédito</button></div></div>';
+  if(d.estado==="nota"&&puede(["admin","almacen"])) acc+='<button type="button" class="'+(d.condicion==="defectuosa"?"btn":"prim")+'" data-acc="anaquel" data-id="'+d.id+'">Regresar a su lugar</button>'+
+      '<button type="button" class="'+(d.condicion==="defectuosa"?"prim":"btn")+'" data-acc="proveedor" data-id="'+d.id+'">Separar para proveedor</button>';
+  if((d.estado==="por_recibir"&&(d.creado_por===window.PANEL.uid||puede(["admin","almacen"])))||(d.estado==="recibida"&&puede(["admin","almacen"])))
+    acc+='<button type="button" class="link" data-acc="cancelar" data-id="'+d.id+'">Cancelar</button>';
+  const lin=["Capturó "+esc(d.creado_nombre||"")+" el "+fH(d.creado)];
+  if(d.recibido_fecha) lin.push("Recibió "+esc(d.recibido_por)+" el "+fH(d.recibido_fecha));
+  if(d.nota_fecha) lin.push("Nota "+esc(d.nota_folio)+" por "+esc(d.nota_por)+" el "+fH(d.nota_fecha)+(d.verificada?" ✓ encontrada en Microsip":""));
+  if(d.destino_fecha) lin.push((d.destino==="proveedor"?"Separada para proveedor":"Regresada a su lugar")+" por "+esc(d.destino_por)+" el "+fH(d.destino_fecha));
+  if(d.cancelado_fecha) lin.push("Cancelada por "+esc(d.cancelado_por)+" el "+fH(d.cancelado_fecha)+(d.motivo_cancelacion?": "+esc(d.motivo_cancelacion):""));
+  return '<div class="dv e-'+d.estado+'"><div class="top"><b>'+esc(d.cliente_nombre)+'</b><span class="dest e-'+d.estado+'">'+EST[d.estado]+"</span></div>"+
+    '<div class="det"><div><span>Artículo</span><br>'+esc(d.articulo_clave||"")+" "+esc(d.articulo_nombre)+"</div>"+
+    "<div><span>Cantidad</span><br>"+fmt.format(d.cantidad)+" "+esc((d.unidad||"").toLowerCase())+(d.cantidad_recibida!=null&&d.cantidad_recibida!==d.cantidad?" · recibidas "+fmt.format(d.cantidad_recibida):"")+"</div>"+
+    "<div><span>Factura</span><br>"+esc(d.factura_folio||"Sin factura")+(d.factura_fecha?" · "+fD(d.factura_fecha):"")+"</div>"+
+    "<div><span>Motivo</span><br>"+esc(d.motivo)+(d.condicion?" · "+(d.condicion==="defectuosa"?"defectuosa":"en buen estado"):"")+"</div></div>"+
+    (d.comentario?'<div class="lin">“'+esc(d.comentario)+"”</div>":"")+(d.comentario_recepcion?'<div class="lin">Almacén: “'+esc(d.comentario_recepcion)+"”</div>":"")+
+    '<div class="lin">'+lin.join(" · ")+"</div>"+(acc?'<div class="acc">'+acc+"</div>":"")+"</div>";
+}
+async function accion(a,id){
+  const d=lista.find(x=>x.id===id); if(!d) return;
+  try{
+    if(a==="recibir") return recibir(d);
+    if(a==="nota"){const f=$("fol_"+id).value.trim(); if(!f){aviso("Escribe el folio de la devolución de Microsip");return}
+      await llamar("dv_nota",{dev:id,fol:f}); aviso("Nota de crédito registrada")}
+    if(a==="anaquel"||a==="proveedor"){await llamar("dv_destino",{dev:id,dest:a}); aviso(a==="anaquel"?"Marcada como regresada a su lugar":"Marcada para devolver al proveedor")}
+    if(a==="cancelar"){const m=prompt("¿Por qué se cancela esta devolución?"); if(m===null) return; await llamar("dv_cancelar",{dev:id,mot:m}); aviso("Devolución cancelada")}
+    await cargarLista(); pintar();
+  }catch(e){aviso(e.message)}
+}
+function recibir(d){
+  const velo=$("velo");
+  velo.innerHTML='<div class="hoja ficha" role="dialog" aria-modal="true" aria-label="Recibir devolución"><header><div><h3>Recibir devolución</h3><div class="sub2">'+esc(d.cliente_nombre)+" · "+esc(d.articulo_clave||"")+" "+esc(d.articulo_nombre)+'</div></div><button type="button" class="link" id="rcerrar">Cerrar</button></header><div class="cuerpo">'+
+    '<div class="checks">'+
+    '<label><input type="checkbox" id="ck1"> Llegó la mercancía al almacén</label>'+
+    '<label><input type="checkbox" id="ck2"> El artículo coincide con lo capturado</label>'+
+    '<label><input type="checkbox" id="ck3" checked> La cantidad coincide ('+fmt.format(d.cantidad)+" "+esc((d.unidad||"").toLowerCase())+")</label>"+
+    '<div id="rcantw" hidden class="cant" style="padding-left:32px">Cantidad recibida <input type="number" id="rcant" min="0" step="any" value="'+d.cantidad+'" inputmode="decimal"></div>'+
+    '<label><input type="checkbox" id="ck4"> Empaque y etiquetas completos</label></div>'+
+    '<div><div class="etq" style="margin-bottom:6px">Condición de la mercancía</div><div class="cond">'+
+    '<label><input type="radio" name="rcond" value="buena"'+(d.motivo==="Producto defectuoso"?"":" checked")+'> En buen estado (regresa a su lugar)</label>'+
+    '<label><input type="radio" name="rcond" value="defectuosa"'+(d.motivo==="Producto defectuoso"?" checked":"")+'> Defectuosa (para proveedor)</label></div></div>'+
+    '<div class="campo"><label class="etq" for="rcom">Comentario (opcional)</label><textarea id="rcom" rows="2"></textarea></div>'+
+    '<div class="acc"><button type="button" class="prim" id="rguardar">Confirmar recepción</button></div></div></div>';
+  velo.hidden=false;
+  const c=()=>{velo.hidden=true;velo.innerHTML=""};
+  $("rcerrar").onclick=c; velo.onclick=e=>{if(e.target===velo)c()};
+  $("ck3").onchange=e=>{$("rcantw").hidden=e.target.checked};
+  $("rguardar").onclick=async()=>{
+    if(!$("ck1").checked||!$("ck2").checked){aviso("Marca que llegó la mercancía y que el artículo coincide");return}
+    const cant=$("ck3").checked?d.cantidad:+$("rcant").value; if(!(cant>0)){aviso("Escribe la cantidad recibida");return}
+    try{await llamar("dv_recibir",{dev:d.id,d:{cantidad_recibida:cant,condicion:document.querySelector('input[name="rcond"]:checked').value,
+        checks:{llego:true,articulo:true,cantidad:$("ck3").checked,empaque:$("ck4").checked},comentario:$("rcom").value}});
+      c(); aviso("Recepción registrada"); await cargarLista(); pintar();}catch(e){aviso(e.message)}
+  };
+}
+
+/* ---------- Formulario de captura ---------- */
+function buscador(cont,ph,fn,elegir){
+  cont.innerHTML='<input type="search" class="dbus" placeholder="'+ph+'" autocomplete="off"><div class="dres"></div>';
+  const inp=cont.querySelector("input"), res=cont.querySelector(".dres"); let t, n=0;
+  inp.oninput=()=>{clearTimeout(t); const q=inp.value.trim(); if(q.length<2){res.innerHTML="";return}
+    t=setTimeout(async()=>{const k=++n; try{const r=await fn(q); if(k!==n) return;
+      res.innerHTML=r.map((x,i)=>'<button type="button" data-i="'+i+'"><span>'+esc(x.nombre)+(x.sub?"<small>"+esc(x.sub)+"</small>":"")+'</span><span class="cl">'+esc(x.clave||"")+"</span></button>").join("")||'<div class="dsub">Sin coincidencias</div>';
+      res.querySelectorAll("button").forEach(b=>b.onclick=()=>elegir(r[+b.dataset.i]));}catch(e){res.innerHTML='<div class="dsub">'+esc(e.message)+"</div>"}},300)};
+  setTimeout(()=>inp.focus(),30);
+}
+function pintarCliente(){
+  const box=$("dcli");
+  if(F.cli){box.innerHTML='<div class="dsel"><span><b>'+esc(F.cli.nombre)+'</b> <span class="cl">'+esc(F.cli.clave||"")+"</span>"+(F.cli.zona?" · "+esc(F.cli.zona):"")+'</span><button type="button" class="link" id="dclix">Cambiar</button></div>';
+    $("dclix").onclick=()=>{F.cli=null;F.art=null;F.fac=null;pintarCliente()}}
+  else buscador(box,"Nombre o clave del cliente",async q=>(await llamar("dv_buscar_clientes",{q})).map(x=>({...x,sub:x.zona})),x=>{F.cli=x;F.art=null;F.fac=null;pintarCliente()});
+  $("dpart").hidden=!F.cli; if(F.cli) pintarArticulo(); else {$("dpfac").hidden=true;$("dpcan").hidden=true}
+}
+let compras=[];
+async function pintarArticulo(){
+  const box=$("dart");
+  if(F.art){box.innerHTML='<div class="dsel"><span><span class="cl">'+esc(F.art.clave||"")+"</span> <b>"+esc(F.art.nombre)+'</b></span><button type="button" class="link" id="dartx">Cambiar</button></div>';
+    $("dartx").onclick=()=>{F.art=null;F.fac=null;pintarArticulo()}; pintarFacturas(); return}
+  $("dpfac").hidden=true; $("dpcan").hidden=true;
+  box.innerHTML='<div class="cargando" style="padding:10px 0">Buscando lo que compró el cliente…</div>';
+  try{compras=await llamar("dv_articulos_cliente",{cli:F.cli.cliente_id})}catch(e){compras=[]}
+  box.innerHTML='<input type="search" class="dbus" id="dartq" placeholder="Nombre o clave del artículo" autocomplete="off"><div class="dsub" id="dartt"></div><div class="dres" id="dartr"></div>';
+  const q=$("dartq"), r=$("dartr"); let t, n=0;
+  const mostrar=(arr,tit)=>{$("dartt").textContent=tit;
+    r.innerHTML=arr.map((x,i)=>'<button type="button" data-i="'+i+'"><span>'+esc(x.nombre)+(x.ultima?"<small>última compra "+fD(x.ultima)+" · "+fmt.format(x.unidades)+" "+esc((x.unidad||"").toLowerCase())+" en 6 meses</small>":"")+'</span><span class="cl">'+esc(x.clave||"")+"</span></button>").join("")||'<div class="dsub">Sin coincidencias</div>';
+    r.querySelectorAll("button").forEach(b=>b.onclick=()=>{F.art=arr[+b.dataset.i];F.fac=null;pintarArticulo()})};
+  const filtrar=()=>{const s=q.value.trim().toLowerCase(), propias=compras.filter(x=>!s||(x.nombre+" "+(x.clave||"")).toLowerCase().includes(s));
+    if(propias.length||!s) mostrar(propias.slice(0,40),compras.length?"Comprados por este cliente en los últimos 6 meses"+(s?" que coinciden":""):"Este cliente no tiene facturas en los últimos 6 meses; busca el artículo.");
+    if(s.length>=2&&!propias.length){clearTimeout(t);t=setTimeout(async()=>{const k=++n;const x=await llamar("dv_buscar_articulos",{q:s}).catch(()=>[]);if(k===n) mostrar(x,"Otros artículos (el cliente no los compró en 6 meses)")},300)}};
+  q.oninput=filtrar; filtrar(); setTimeout(()=>q.focus(),30);
+}
+async function pintarFacturas(){
+  const box=$("dfac"); $("dpfac").hidden=false; box.innerHTML='<div class="cargando" style="padding:10px 0">Buscando facturas…</div>';
+  try{F.facs=await llamar("dv_facturas",{cli:F.cli.cliente_id,art:F.art.articulo_id})}catch(e){F.facs=[]}
+  if(!F.fac) F.fac=F.facs[0]||null;
+  box.innerHTML='<div class="dfacs">'+F.facs.map((f,i)=>'<label><input type="radio" name="dfac" value="'+i+'"'+(F.fac===f?" checked":"")+"><span><b>"+esc(f.folio)+"</b> · "+fD(f.fecha)+" · "+fmt.format(f.unidades)+" "+esc((F.art.unidad||"").toLowerCase())+" a "+dinero(f.precio_unitario)+(i===0?" · la más reciente":"")+"</span></label>").join("")+
+    '<label><input type="radio" name="dfac" value="-1"'+(!F.fac?" checked":"")+"><span>No aparece la factura / sin factura</span></label></div>"+
+    (F.facs.length?"":'<div class="dsub">No encontré facturas de este artículo para el cliente en los últimos 6 meses.</div>');
+  box.querySelectorAll('input[name="dfac"]').forEach(x=>x.onchange=()=>{F.fac=+x.value>=0?F.facs[+x.value]:null;revisarCant()});
+  $("dpcan").hidden=false; $("duni").textContent=(F.art.unidad||"").toLowerCase(); revisarCant();
+}
+function revisarCant(){
+  const c=+$("dcant").value, w=$("dwarn");
+  if(F.fac&&c>F.fac.unidades){w.textContent="La cantidad es mayor que lo facturado en "+F.fac.folio+" ("+fmt.format(F.fac.unidades)+").";w.hidden=false} else w.hidden=true;
+}
+async function guardar(){
+  const c=+$("dcant").value, m=$("dmot").value;
+  if(!F.cli||!F.art){aviso("Elige el cliente y el artículo");return}
+  if(!(c>0)){aviso("Escribe la cantidad a devolver");return}
+  if(!m){aviso("Elige el motivo");return}
+  const b=$("dguardar"); b.disabled=true;
+  try{
+    await llamar("dv_crear",{d:{cliente_id:F.cli.cliente_id,cliente_nombre:F.cli.nombre,articulo_id:F.art.articulo_id,articulo_clave:F.art.clave,articulo_nombre:F.art.nombre,
+      unidad:F.art.unidad,cantidad:c,motivo:m,comentario:$("dcom").value,factura_docto:F.fac?F.fac.docto_ve_id:"",factura_folio:F.fac?F.fac.folio:"",
+      factura_fecha:F.fac?F.fac.fecha:"",factura_unidades:F.fac?F.fac.unidades:"",precio_unitario:F.fac?F.fac.precio_unitario:""}});
+    aviso("Devolución registrada; queda por recibir en almacén");
+    // listo para otra del mismo cliente
+    F.art=null;F.fac=null;$("dcant").value="";$("dmot").value="";$("dcom").value="";$("dwarn").hidden=true;
+    pintarArticulo(); await cargarLista(); pintar();
+  }catch(e){aviso(e.message)} finally{b.disabled=false}
 }
 })();
 </script>
