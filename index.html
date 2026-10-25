@@ -193,6 +193,18 @@ textarea{width:100%;background:var(--surface-2);border:1px solid var(--line);bor
 .dv .lin{font-size:.78rem;color:var(--ink-3)}
 .dest{display:inline-block;font-size:.72rem;font-weight:600;border-radius:999px;padding:1px 8px;border:1px solid currentColor;white-space:nowrap}
 .dest.e-por_recibir{color:var(--s1)} .dest.e-recibida{color:var(--s2)} .dest.e-nota{color:var(--s3)} .dest.e-cerrada{color:var(--good)} .dest.e-cancelada{color:var(--ink-3)}
+.dlineas{display:grid;gap:6px}
+.dlineas .dsel{background:var(--surface-2);border-color:var(--line)}
+.dvarts{display:grid;gap:6px}
+.dvart{border-top:1px solid var(--line-soft);padding-top:6px;display:grid;gap:4px;font-size:.88rem}
+.dvart:first-child{border-top:0;padding-top:0}
+.dvart.can{opacity:.6}
+.dvart .acc .prim,.dvart .acc .btn{min-height:36px;padding:6px 12px;font-size:.84rem}
+.dnl{margin:0;padding-left:18px;display:grid;gap:2px}
+.rlineas{display:grid;gap:8px}
+.rlin{border:1px solid var(--line-soft);border-radius:var(--r);padding:8px 10px;display:grid;gap:6px}
+.rlin .fila{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rlin select{min-height:42px}
 .dnota{border:1px dashed var(--s2);border-radius:var(--r);padding:10px;display:grid;gap:8px;background:var(--surface-2)}
 .dnota .fila input{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;min-height:42px;font-size:16px;text-transform:uppercase}
 .checks{display:grid;gap:6px}
@@ -406,6 +418,7 @@ input.busq{flex:1 1 220px;min-width:0}
     <div class="dvaviso" id="dvaviso" hidden></div>
     <section class="panel dvform" id="dnueva" hidden>
       <div class="dpaso"><span class="etq">1 · Cliente</span><div id="dcli"></div></div>
+      <div class="dpaso dlineas" id="dlineas" hidden></div>
       <div class="dpaso" id="dpart" hidden><span class="etq">2 · Artículo a devolver</span><div id="dart"></div></div>
       <div class="dpaso" id="dpfac" hidden><span class="etq">3 · Factura</span><div id="dfac"></div></div>
       <div class="dpaso" id="dpcan" hidden><span class="etq">4 · Cantidad y motivo</span>
@@ -417,7 +430,7 @@ input.busq{flex:1 1 220px;min-width:0}
         </div>
         <div class="campo"><label class="etq" for="dcom">Comentario (opcional)</label><textarea id="dcom" rows="2" placeholder="Detalle de la falla, quién la trae, etc."></textarea></div>
         <div id="dwarn" class="dwarn" hidden></div>
-        <div class="acc"><button type="button" class="prim" id="dguardar">Registrar devolución</button></div>
+        <div class="acc"><button type="button" class="prim" id="dguardar">Registrar devolución</button><button type="button" class="btn" id="dotro">Agregar otro artículo de la misma factura</button></div>
       </div>
     </section>
     <section id="dlista"></section>
@@ -1279,18 +1292,20 @@ function ficha(p){
 <script>
 (function(){
 "use strict";
-/* Pestaña Devoluciones (solo en la página web con usuario): captura → recepción → nota de crédito → destino */
+/* Pestaña Devoluciones (solo en la página web con usuario): captura → recepción → nota de crédito → destino.
+   Una captura puede llevar varios artículos de la misma factura (mismo "grupo"). */
 const MESN=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
 const $=s=>document.getElementById(s);
 const fmt=new Intl.NumberFormat("es-MX",{maximumFractionDigits:2});
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const dinero=v=>v==null?"—":"$"+new Intl.NumberFormat("es-MX",{minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
+const uni=u=>esc((u||"").toLowerCase());
 const fD=s=>{if(!s)return"—";const d=new Date(s.length<=10?s+"T12:00:00":s);return d.getDate()+" "+MESN[d.getMonth()]+(d.getFullYear()!==new Date().getFullYear()?" "+d.getFullYear():"")};
 const fH=s=>{if(!s)return"";const d=new Date(s);return fD(s)+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
 const EST={por_recibir:"Por recibir",recibida:"Recibida · falta nota",nota:"Nota generada · por acomodar",cerrada:"Cerrada",cancelada:"Cancelada"};
-let rpc=null, rol="", vista="nueva", lista=[], prom=null;
-const F={cli:null,art:null,fac:null,facs:[]};
-const puede=r=>r.includes(rol);
+const ORD=["por_recibir","recibida","nota","cerrada"], PEND=["por_recibir","recibida","nota"];
+let rpc=null, rol="", vista="nueva", lista=[], grupos=[], prom=null;
+const F={cli:null,art:null,fac:null,facs:[],lineas:[],fija:false};
+const puede=r=>r.includes(rol), alm=()=>puede(["admin","almacen"]);
 
 async function llamar(fn,args){const {data,error}=await rpc(fn,args||{}); if(error) throw new Error(error.message); return data}
 function aviso(m){const a=$("aviso");a.textContent=m;a.hidden=false;clearTimeout(aviso.t);aviso.t=setTimeout(()=>a.hidden=true,3500)}
@@ -1302,95 +1317,119 @@ window.PANEL.devoluciones=()=>prom||(prom=iniciar());
 
 async function iniciar(){
   $("dvistas").querySelectorAll("button").forEach(b=>b.onclick=()=>{vista=b.dataset.v;pintar()});
-  if(puede(["admin","almacen"])) vista="pend";
-  pintarCliente(); $("dguardar").onclick=guardar;
+  if(alm()) vista="pend";
+  pintarCliente(); $("dguardar").onclick=guardar; $("dotro").onclick=agregarOtro;
   $("dcant").oninput=revisarCant;
   await cargarLista(); pintar();
 }
+/* ---------- Lista agrupada ---------- */
 async function cargarLista(){
   lista=await llamar("dv_lista",{desde:new Date(Date.now()-60*864e5).toISOString()});
-  const pend=lista.filter(d=>puede(["admin","almacen"])?["por_recibir","recibida","nota"].includes(d.estado):d.estado==="por_recibir");
-  const b=$("dbadge"); b.textContent=pend.length; b.hidden=!pend.length;
+  const m=new Map();
+  for(const d of lista){const k=d.grupo||d.id; if(!m.has(k)) m.set(k,[]); m.get(k).push(d)}
+  grupos=[...m.values()].map(ls=>{ls.sort((a,b)=>(a.articulo_nombre||"").localeCompare(b.articulo_nombre||""));
+    const act=ls.filter(d=>d.estado!=="cancelada");
+    const estado=act.length?ORD[Math.min(...act.map(d=>ORD.indexOf(d.estado)))]:"cancelada";
+    const t=ls.reduce((a,d)=>a.creado<d.creado?a:d);
+    return {ls,act,estado,d:t,tiene:e=>act.some(x=>x.estado===e)}});
+  grupos.sort((a,b)=>b.d.creado.localeCompare(a.d.creado));
+  const n=grupos.filter(g=>alm()?PEND.includes(g.estado):g.estado==="por_recibir").length;
+  const b=$("dbadge"); b.textContent=n; b.hidden=!n;
 }
 function pintar(){
+  const pend=grupos.filter(g=>PEND.includes(g.estado));
   for(const b of $("dvistas").children){b.setAttribute("aria-pressed",b.dataset.v===vista);
-    if(b.dataset.v==="pend"){const n=lista.filter(d=>["por_recibir","recibida","nota"].includes(d.estado)).length;b.textContent="Pendientes"+(n?" ("+n+")":"")}}
+    if(b.dataset.v==="pend") b.textContent="Pendientes"+(pend.length?" ("+pend.length+")":"")}
   $("dnueva").hidden=vista!=="nueva";
-  // Aviso para almacén: lo que espera acción
-  const n=k=>lista.filter(d=>d.estado===k).length;
-  const av=$("dvaviso");
-  if(puede(["admin","almacen"])&&(n("por_recibir")+n("recibida")+n("nota"))){
-    av.innerHTML="<b>"+n("por_recibir")+"</b> por recibir · <b>"+n("recibida")+"</b> esperando nota de crédito · <b>"+n("nota")+"</b> por acomodar o separar";av.hidden=false;
-  } else av.hidden=true;
+  const n=k=>grupos.filter(g=>g.tiene(k)).length, av=$("dvaviso");
+  if(alm()&&pend.length){av.innerHTML="<b>"+n("por_recibir")+"</b> por recibir · <b>"+n("recibida")+"</b> esperando nota de crédito · <b>"+n("nota")+"</b> por acomodar o separar";av.hidden=false}
+  else av.hidden=true;
   if(vista==="nueva"){$("dlista").innerHTML="";return}
-  const ver=lista.filter(d=>vista==="pend"?["por_recibir","recibida","nota"].includes(d.estado):["cerrada","cancelada"].includes(d.estado));
-  // Pendientes: primero lo que espera nota (Alan), luego por recibir, luego por acomodar
-  const orden={recibida:0,por_recibir:1,nota:2,cerrada:3,cancelada:4};
-  if(vista==="pend") ver.sort((a,b)=>orden[a.estado]-orden[b.estado]||a.creado.localeCompare(b.creado));
+  const orden={recibida:0,por_recibir:1,nota:2};
+  const ver=vista==="pend"?pend.slice().sort((a,b)=>orden[a.estado]-orden[b.estado]||a.d.creado.localeCompare(b.d.creado))
+                          :grupos.filter(g=>!PEND.includes(g.estado));
   $("dlista").innerHTML=ver.map(tarjeta).join("")||'<div class="panel cargando">'+(vista==="pend"?"No hay devoluciones pendientes.":"Sin devoluciones cerradas en los últimos 60 días.")+"</div>";
-  $("dlista").querySelectorAll("[data-acc]").forEach(b=>b.onclick=()=>accion(b.dataset.acc,b.dataset.id));
+  $("dlista").querySelectorAll("[data-acc]").forEach(b=>b.onclick=()=>accion(b.dataset.acc,b.dataset.g,b.dataset.id));
 }
-function tarjeta(d){
-  const imp=(d.cantidad_recibida??d.cantidad)*(d.precio_unitario||0);
+const gkey=g=>g.d.grupo||g.d.id;
+function tarjeta(g){
+  const d=g.d, k=gkey(g), varios=g.ls.length>1;
+  const filas=g.ls.map(x=>{
+    const rec=x.cantidad_recibida!=null&&+x.cantidad_recibida!==+x.cantidad?" · recibidas "+fmt.format(x.cantidad_recibida):"";
+    const est=x.estado==="cancelada"?' <span class="dest e-cancelada">Cancelado</span>':x.destino?' <span class="dest e-cerrada">'+(x.destino==="proveedor"?"Para proveedor":"A su lugar")+"</span>":"";
+    const btn=x.estado==="nota"&&alm()?'<div class="acc"><button type="button" class="'+(x.condicion==="defectuosa"?"btn":"prim")+'" data-acc="anaquel" data-g="'+k+'" data-id="'+x.id+'">Regresar a su lugar</button>'+
+      '<button type="button" class="'+(x.condicion==="defectuosa"?"prim":"btn")+'" data-acc="proveedor" data-g="'+k+'" data-id="'+x.id+'">Separar para proveedor</button></div>':"";
+    return '<div class="dvart'+(x.estado==="cancelada"?" can":"")+'"><div><span class="cl">'+esc(x.articulo_clave||"")+"</span> "+esc(x.articulo_nombre)+est+"</div>"+
+      '<div class="sub2">'+fmt.format(x.cantidad)+" "+uni(x.unidad)+rec+" · "+esc(x.motivo)+(x.condicion?" · "+(x.condicion==="defectuosa"?"defectuosa":"en buen estado"):"")+
+      (x.comentario?" · “"+esc(x.comentario)+"”":"")+"</div>"+btn+"</div>"}).join("");
   let acc="";
-  if(d.estado==="por_recibir"&&puede(["admin","almacen"])) acc+='<button type="button" class="prim" data-acc="recibir" data-id="'+d.id+'">Recibir mercancía</button>';
-  if(d.estado==="recibida"&&puede(["admin","almacen"])) acc+='<div class="dnota"><b>Generar la devolución de venta en Microsip</b>'+
-      '<div>Cliente: <b>'+esc(d.cliente_nombre)+"</b> · Factura <b>"+esc(d.factura_folio||"sin factura")+"</b>"+(d.factura_fecha?" del "+fD(d.factura_fecha):"")+
-      "<br>Artículo: <b>"+esc(d.articulo_clave||"")+" "+esc(d.articulo_nombre)+"</b> · Cantidad recibida: <b>"+fmt.format(d.cantidad_recibida??d.cantidad)+" "+esc((d.unidad||"").toLowerCase())+"</b>"+
-      (d.precio_unitario?" · a "+dinero(d.precio_unitario)+" = <b>"+dinero(imp)+"</b> sin IVA":"")+"<br>Condición: <b>"+(d.condicion==="defectuosa"?"Defectuosa":"Buena")+"</b> · Motivo: "+esc(d.motivo)+"</div>"+
-      '<div class="fila"><input type="text" id="fol_'+d.id+'" placeholder="Folio (NF0074850)" autocomplete="off"><button type="button" class="prim" data-acc="nota" data-id="'+d.id+'">Registrar nota de crédito</button></div></div>';
-  if(d.estado==="nota"&&puede(["admin","almacen"])) acc+='<button type="button" class="'+(d.condicion==="defectuosa"?"btn":"prim")+'" data-acc="anaquel" data-id="'+d.id+'">Regresar a su lugar</button>'+
-      '<button type="button" class="'+(d.condicion==="defectuosa"?"prim":"btn")+'" data-acc="proveedor" data-id="'+d.id+'">Separar para proveedor</button>';
-  if((d.estado==="por_recibir"&&(d.creado_por===window.PANEL.uid||puede(["admin","almacen"])))||(d.estado==="recibida"&&puede(["admin","almacen"])))
-    acc+='<button type="button" class="link" data-acc="cancelar" data-id="'+d.id+'">Cancelar</button>';
+  if(g.tiene("por_recibir")&&alm()) acc+='<button type="button" class="prim" data-acc="recibir" data-g="'+k+'">Recibir mercancía</button>';
+  if(g.tiene("recibida")&&alm()){
+    const rs=g.act.filter(x=>x.estado==="recibida");
+    acc+='<div class="dnota"><b>Generar la devolución de venta en Microsip</b>'+
+      "<div>Cliente: <b>"+esc(d.cliente_nombre)+"</b> · Factura <b>"+esc(d.factura_folio||"sin factura")+"</b>"+(d.factura_fecha?" del "+fD(d.factura_fecha):"")+"</div>"+
+      '<ul class="dnl">'+rs.map(x=>"<li><b>"+esc(x.articulo_clave||"")+" "+esc(x.articulo_nombre)+"</b> · "+fmt.format(x.cantidad_recibida??x.cantidad)+" "+uni(x.unidad)+
+        " · "+(x.condicion==="defectuosa"?"defectuosa":"en buen estado")+"</li>").join("")+"</ul>"+
+      '<div class="fila"><input type="text" id="fol_'+k+'" placeholder="Folio (NF0074850)" autocomplete="off"><button type="button" class="prim" data-acc="nota" data-g="'+k+'">Registrar nota de crédito</button></div></div>';
+  }
+  const cancelable=g.act.some(x=>(x.estado==="por_recibir"&&(x.creado_por===window.PANEL.uid||alm()))||(x.estado==="recibida"&&alm()));
+  if(cancelable) acc+='<button type="button" class="link" data-acc="cancelar" data-g="'+k+'">Cancelar'+(varios?" devolución":"")+"</button>";
+  const r=g.ls.find(x=>x.recibido_fecha), nt=g.ls.find(x=>x.nota_fecha), ds=g.ls.filter(x=>x.destino_fecha).pop(), cn=g.ls.find(x=>x.cancelado_fecha);
   const lin=["Capturó "+esc(d.creado_nombre||"")+" el "+fH(d.creado)];
-  if(d.recibido_fecha) lin.push("Recibió "+esc(d.recibido_por)+" el "+fH(d.recibido_fecha));
-  if(d.nota_fecha) lin.push("Nota "+esc(d.nota_folio)+" por "+esc(d.nota_por)+" el "+fH(d.nota_fecha)+(d.verificada?" ✓ encontrada en Microsip":""));
-  if(d.destino_fecha) lin.push((d.destino==="proveedor"?"Separada para proveedor":"Regresada a su lugar")+" por "+esc(d.destino_por)+" el "+fH(d.destino_fecha));
-  if(d.cancelado_fecha) lin.push("Cancelada por "+esc(d.cancelado_por)+" el "+fH(d.cancelado_fecha)+(d.motivo_cancelacion?": "+esc(d.motivo_cancelacion):""));
-  return '<div class="dv e-'+d.estado+'"><div class="top"><b>'+esc(d.cliente_nombre)+'</b><span class="dest e-'+d.estado+'">'+EST[d.estado]+"</span></div>"+
-    '<div class="det"><div><span>Artículo</span><br>'+esc(d.articulo_clave||"")+" "+esc(d.articulo_nombre)+"</div>"+
-    "<div><span>Cantidad</span><br>"+fmt.format(d.cantidad)+" "+esc((d.unidad||"").toLowerCase())+(d.cantidad_recibida!=null&&d.cantidad_recibida!==d.cantidad?" · recibidas "+fmt.format(d.cantidad_recibida):"")+"</div>"+
-    "<div><span>Factura</span><br>"+esc(d.factura_folio||"Sin factura")+(d.factura_fecha?" · "+fD(d.factura_fecha):"")+"</div>"+
-    "<div><span>Motivo</span><br>"+esc(d.motivo)+(d.condicion?" · "+(d.condicion==="defectuosa"?"defectuosa":"en buen estado"):"")+"</div></div>"+
-    (d.comentario?'<div class="lin">“'+esc(d.comentario)+"”</div>":"")+(d.comentario_recepcion?'<div class="lin">Almacén: “'+esc(d.comentario_recepcion)+"”</div>":"")+
+  if(r) lin.push("Recibió "+esc(r.recibido_por)+" el "+fH(r.recibido_fecha));
+  if(nt) lin.push("Nota "+esc(nt.nota_folio)+" por "+esc(nt.nota_por)+" el "+fH(nt.nota_fecha)+(nt.verificada?" ✓ encontrada en Microsip":""));
+  if(ds) lin.push("Acomodó "+esc(ds.destino_por)+" el "+fH(ds.destino_fecha));
+  if(cn) lin.push("Canceló "+esc(cn.cancelado_por)+" el "+fH(cn.cancelado_fecha)+(cn.motivo_cancelacion?": "+esc(cn.motivo_cancelacion):""));
+  const rc=g.ls.map(x=>x.comentario_recepcion).find(Boolean);
+  return '<div class="dv e-'+g.estado+'"><div class="top"><b>'+esc(d.cliente_nombre)+'</b><span class="dest e-'+g.estado+'">'+EST[g.estado]+"</span></div>"+
+    '<div class="sub2">Factura '+esc(d.factura_folio||"sin factura")+(d.factura_fecha?" · "+fD(d.factura_fecha):"")+" · "+g.ls.length+(varios?" artículos":" artículo")+"</div>"+
+    '<div class="dvarts">'+filas+"</div>"+(rc?'<div class="lin">Almacén: “'+esc(rc)+"”</div>":"")+
     '<div class="lin">'+lin.join(" · ")+"</div>"+(acc?'<div class="acc">'+acc+"</div>":"")+"</div>";
 }
-async function accion(a,id){
-  const d=lista.find(x=>x.id===id); if(!d) return;
+async function accion(a,k,id){
+  const g=grupos.find(x=>gkey(x)===k); if(!g) return;
   try{
-    if(a==="recibir") return recibir(d);
-    if(a==="nota"){const f=$("fol_"+id).value.trim(); if(!f){aviso("Escribe el folio de la devolución de Microsip");return}
-      await llamar("dv_nota",{dev:id,fol:f}); aviso("Nota de crédito registrada")}
-    if(a==="anaquel"||a==="proveedor"){await llamar("dv_destino",{dev:id,dest:a}); aviso(a==="anaquel"?"Marcada como regresada a su lugar":"Marcada para devolver al proveedor")}
-    if(a==="cancelar"){const m=prompt("¿Por qué se cancela esta devolución?"); if(m===null) return; await llamar("dv_cancelar",{dev:id,mot:m}); aviso("Devolución cancelada")}
-    await cargarLista(); pintar();
+    if(a==="recibir") return recibir(g);
+    if(a==="nota"){const f=$("fol_"+k).value.trim(); if(!f){aviso("Escribe el folio de la devolución de Microsip");return}
+      for(const x of g.act.filter(x=>x.estado==="recibida")) await llamar("dv_nota",{dev:x.id,fol:f});
+      aviso("Nota de crédito registrada")}
+    if(a==="anaquel"||a==="proveedor"){await llamar("dv_destino",{dev:id,dest:a}); aviso(a==="anaquel"?"Marcado como regresado a su lugar":"Marcado para devolver al proveedor")}
+    if(a==="cancelar"){const m=prompt("¿Por qué se cancela esta devolución?"); if(m===null) return;
+      for(const x of g.act) if((x.estado==="por_recibir"&&(x.creado_por===window.PANEL.uid||alm()))||(x.estado==="recibida"&&alm())) await llamar("dv_cancelar",{dev:x.id,mot:m});
+      aviso("Devolución cancelada")}
   }catch(e){aviso(e.message)}
+  await cargarLista().catch(()=>{}); pintar();
 }
-function recibir(d){
-  const velo=$("velo");
-  velo.innerHTML='<div class="hoja ficha" role="dialog" aria-modal="true" aria-label="Recibir devolución"><header><div><h3>Recibir devolución</h3><div class="sub2">'+esc(d.cliente_nombre)+" · "+esc(d.articulo_clave||"")+" "+esc(d.articulo_nombre)+'</div></div><button type="button" class="link" id="rcerrar">Cerrar</button></header><div class="cuerpo">'+
-    '<div class="checks">'+
-    '<label><input type="checkbox" id="ck1"> Llegó la mercancía al almacén</label>'+
-    '<label><input type="checkbox" id="ck2"> El artículo coincide con lo capturado</label>'+
-    '<label><input type="checkbox" id="ck3" checked> La cantidad coincide ('+fmt.format(d.cantidad)+" "+esc((d.unidad||"").toLowerCase())+")</label>"+
-    '<div id="rcantw" hidden class="cant" style="padding-left:32px">Cantidad recibida <input type="number" id="rcant" min="0" step="any" value="'+d.cantidad+'" inputmode="decimal"></div>'+
+function recibir(g){
+  const ls=g.act.filter(x=>x.estado==="por_recibir"), velo=$("velo");
+  velo.innerHTML='<div class="hoja ficha" role="dialog" aria-modal="true" aria-label="Recibir devolución"><header><div><h3>Recibir devolución</h3><div class="sub2">'+esc(g.d.cliente_nombre)+" · Factura "+esc(g.d.factura_folio||"sin factura")+'</div></div><button type="button" class="link" id="rcerrar">Cerrar</button></header><div class="cuerpo">'+
+    '<div class="checks"><label><input type="checkbox" id="ck1"> Llegó la mercancía al almacén</label>'+
+    '<label><input type="checkbox" id="ck2"> Los artículos coinciden con lo capturado</label>'+
     '<label><input type="checkbox" id="ck4"> Empaque y etiquetas completos</label></div>'+
-    '<div><div class="etq" style="margin-bottom:6px">Condición de la mercancía</div><div class="cond">'+
-    '<label><input type="radio" name="rcond" value="buena"'+(d.motivo==="Producto defectuoso"?"":" checked")+'> En buen estado (regresa a su lugar)</label>'+
-    '<label><input type="radio" name="rcond" value="defectuosa"'+(d.motivo==="Producto defectuoso"?" checked":"")+'> Defectuosa (para proveedor)</label></div></div>'+
+    '<div class="etq">Cantidad recibida y condición'+(ls.length>1?" de cada artículo":"")+'</div><div class="rlineas">'+
+    ls.map((x,i)=>'<div class="rlin"><div><span class="cl">'+esc(x.articulo_clave||"")+"</span> "+esc(x.articulo_nombre)+'<div class="sub2">Capturado: '+fmt.format(x.cantidad)+" "+uni(x.unidad)+" · "+esc(x.motivo)+"</div></div>"+
+      '<div class="fila"><div class="cant"><input type="number" id="rc'+i+'" min="0" step="any" value="'+x.cantidad+'" inputmode="decimal" aria-label="Cantidad recibida"><span>'+uni(x.unidad)+"</span></div>"+
+      '<select id="rk'+i+'" aria-label="Condición"><option value="buena"'+(x.motivo==="Producto defectuoso"?"":" selected")+'>En buen estado</option><option value="defectuosa"'+(x.motivo==="Producto defectuoso"?" selected":"")+">Defectuosa</option></select></div></div>").join("")+
+    '</div><div class="sub2">Si un artículo no llegó, pon cantidad 0 y se cancela ese artículo.</div>'+
     '<div class="campo"><label class="etq" for="rcom">Comentario (opcional)</label><textarea id="rcom" rows="2"></textarea></div>'+
     '<div class="acc"><button type="button" class="prim" id="rguardar">Confirmar recepción</button></div></div></div>';
   velo.hidden=false;
   const c=()=>{velo.hidden=true;velo.innerHTML=""};
   $("rcerrar").onclick=c; velo.onclick=e=>{if(e.target===velo)c()};
-  $("ck3").onchange=e=>{$("rcantw").hidden=e.target.checked};
   $("rguardar").onclick=async()=>{
-    if(!$("ck1").checked||!$("ck2").checked){aviso("Marca que llegó la mercancía y que el artículo coincide");return}
-    const cant=$("ck3").checked?d.cantidad:+$("rcant").value; if(!(cant>0)){aviso("Escribe la cantidad recibida");return}
-    try{await llamar("dv_recibir",{dev:d.id,d:{cantidad_recibida:cant,condicion:document.querySelector('input[name="rcond"]:checked').value,
-        checks:{llego:true,articulo:true,cantidad:$("ck3").checked,empaque:$("ck4").checked},comentario:$("rcom").value}});
-      c(); aviso("Recepción registrada"); await cargarLista(); pintar();}catch(e){aviso(e.message)}
+    if(!$("ck1").checked||!$("ck2").checked){aviso("Marca que llegó la mercancía y que los artículos coinciden");return}
+    const cs=ls.map((x,i)=>+$("rc"+i).value);
+    if(cs.some(v=>!(v>=0))){aviso("Revisa las cantidades recibidas");return}
+    if(cs.every(v=>v===0)){aviso("Si no llegó nada, mejor cancela la devolución");return}
+    $("rguardar").disabled=true;
+    try{
+      for(let i=0;i<ls.length;i++){const x=ls[i];
+        if(cs[i]===0) await llamar("dv_cancelar",{dev:x.id,mot:"No llegó al almacén"});
+        else await llamar("dv_recibir",{dev:x.id,d:{cantidad_recibida:cs[i],condicion:$("rk"+i).value,
+          checks:{llego:true,articulos:true,empaque:$("ck4").checked,cantidad:cs[i]===+x.cantidad},comentario:$("rcom").value}})}
+      c(); aviso("Recepción registrada");
+    }catch(e){aviso(e.message);$("rguardar").disabled=false}
+    await cargarLista().catch(()=>{}); pintar();
   };
 }
 
@@ -1404,59 +1443,103 @@ function buscador(cont,ph,fn,elegir){
       res.querySelectorAll("button").forEach(b=>b.onclick=()=>elegir(r[+b.dataset.i]));}catch(e){res.innerHTML='<div class="dsub">'+esc(e.message)+"</div>"}},300)};
   setTimeout(()=>inp.focus(),30);
 }
+function reiniciar(){F.art=null;F.fac=null;F.facs=[];F.lineas=[];F.fija=false;limpiarLinea()}
+function limpiarLinea(){$("dcant").value="";$("dcom").value="";$("dwarn").hidden=true}
 function pintarCliente(){
   const box=$("dcli");
-  if(F.cli){box.innerHTML='<div class="dsel"><span><b>'+esc(F.cli.nombre)+'</b> <span class="cl">'+esc(F.cli.clave||"")+"</span>"+(F.cli.zona?" · "+esc(F.cli.zona):"")+'</span><button type="button" class="link" id="dclix">Cambiar</button></div>';
-    $("dclix").onclick=()=>{F.cli=null;F.art=null;F.fac=null;pintarCliente()}}
-  else buscador(box,"Nombre o clave del cliente",async q=>(await llamar("dv_buscar_clientes",{q})).map(x=>({...x,sub:x.zona})),x=>{F.cli=x;F.art=null;F.fac=null;pintarCliente()});
+  if(F.cli){box.innerHTML='<div class="dsel"><span><b>'+esc(F.cli.nombre)+'</b> <span class="cl">'+esc(F.cli.clave||"")+"</span>"+(F.cli.zona?" · "+esc(F.cli.zona):"")+"</span>"+
+      (F.lineas.length?"":'<button type="button" class="link" id="dclix">Cambiar</button>')+"</div>";
+    if($("dclix")) $("dclix").onclick=()=>{F.cli=null;reiniciar();$("dmot").value="";pintarCliente()}}
+  else buscador(box,"Nombre o clave del cliente",async q=>(await llamar("dv_buscar_clientes",{q})).map(x=>({...x,sub:x.zona})),x=>{F.cli=x;reiniciar();pintarCliente()});
+  pintarLineas();
   $("dpart").hidden=!F.cli; if(F.cli) pintarArticulo(); else {$("dpfac").hidden=true;$("dpcan").hidden=true}
+}
+function pintarLineas(){
+  const box=$("dlineas"); box.hidden=!F.lineas.length;
+  box.innerHTML='<span class="etq">Artículos en esta devolución</span>'+F.lineas.map((l,i)=>'<div class="dsel"><span><span class="cl">'+esc(l.articulo_clave||"")+"</span> <b>"+esc(l.articulo_nombre)+"</b>"+
+    '<span class="sub2"> · '+fmt.format(l.cantidad)+" "+uni(l.unidad)+" · "+esc(l.motivo)+'</span></span><button type="button" class="link" data-q="'+i+'" aria-label="Quitar">Quitar</button></div>').join("");
+  box.querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>{F.lineas.splice(+b.dataset.q,1); if(!F.lineas.length) F.fija=false; pintarCliente()});
+  $("dguardar").textContent=F.lineas.length?"Registrar devolución ("+(F.lineas.length+(F.art?1:0))+" artículos)":"Registrar devolución";
 }
 let compras=[];
 async function pintarArticulo(){
   const box=$("dart");
+  $("dpart").querySelector(".etq").textContent=(F.lineas.length?"2 · Otro artículo de la misma factura":"2 · Artículo a devolver");
   if(F.art){box.innerHTML='<div class="dsel"><span><span class="cl">'+esc(F.art.clave||"")+"</span> <b>"+esc(F.art.nombre)+'</b></span><button type="button" class="link" id="dartx">Cambiar</button></div>';
-    $("dartx").onclick=()=>{F.art=null;F.fac=null;pintarArticulo()}; pintarFacturas(); return}
-  $("dpfac").hidden=true; $("dpcan").hidden=true;
-  box.innerHTML='<div class="cargando" style="padding:10px 0">Buscando lo que compró el cliente…</div>';
-  try{compras=await llamar("dv_articulos_cliente",{cli:F.cli.cliente_id})}catch(e){compras=[]}
+    $("dartx").onclick=()=>{F.art=null;if(!F.fija)F.fac=null;pintarArticulo()}; pintarFacturas(); pintarLineas(); return}
+  $("dpfac").hidden=true; $("dpcan").hidden=true; pintarLineas();
+  const ya=new Set(F.lineas.map(l=>l.articulo_id));
+  let fuente=null;
+  if(F.fija&&F.fac){ // solo los artículos de esa factura
+    box.innerHTML='<div class="cargando" style="padding:10px 0">Buscando los artículos de la factura…</div>';
+    try{fuente=(await llamar("dv_articulos_factura",{doc:F.fac.docto_ve_id})).filter(x=>!ya.has(x.articulo_id))}catch(e){fuente=null}
+  }
+  if(!fuente){
+    box.innerHTML='<div class="cargando" style="padding:10px 0">Buscando lo que compró el cliente…</div>';
+    try{compras=await llamar("dv_articulos_cliente",{cli:F.cli.cliente_id})}catch(e){compras=[]}
+    fuente=null;
+  }
+  const deFactura=!!fuente, base=(fuente||compras).filter(x=>!ya.has(x.articulo_id));
   box.innerHTML='<input type="search" class="dbus" id="dartq" placeholder="Nombre o clave del artículo" autocomplete="off"><div class="dsub" id="dartt"></div><div class="dres" id="dartr"></div>';
   const q=$("dartq"), r=$("dartr"); let t, n=0;
   const mostrar=(arr,tit)=>{$("dartt").textContent=tit;
-    r.innerHTML=arr.map((x,i)=>'<button type="button" data-i="'+i+'"><span>'+esc(x.nombre)+(x.ultima?"<small>última compra "+fD(x.ultima)+" · "+fmt.format(x.unidades)+" "+esc((x.unidad||"").toLowerCase())+" en 6 meses</small>":"")+'</span><span class="cl">'+esc(x.clave||"")+"</span></button>").join("")||'<div class="dsub">Sin coincidencias</div>';
-    r.querySelectorAll("button").forEach(b=>b.onclick=()=>{F.art=arr[+b.dataset.i];F.fac=null;pintarArticulo()})};
-  const filtrar=()=>{const s=q.value.trim().toLowerCase(), propias=compras.filter(x=>!s||(x.nombre+" "+(x.clave||"")).toLowerCase().includes(s));
-    if(propias.length||!s) mostrar(propias.slice(0,40),compras.length?"Comprados por este cliente en los últimos 6 meses"+(s?" que coinciden":""):"Este cliente no tiene facturas en los últimos 6 meses; busca el artículo.");
-    if(s.length>=2&&!propias.length){clearTimeout(t);t=setTimeout(async()=>{const k=++n;const x=await llamar("dv_buscar_articulos",{q:s}).catch(()=>[]);if(k===n) mostrar(x,"Otros artículos (el cliente no los compró en 6 meses)")},300)}};
+    r.innerHTML=arr.map((x,i)=>'<button type="button" data-i="'+i+'"><span>'+esc(x.nombre)+
+      (deFactura?"<small>"+fmt.format(x.unidades)+" "+uni(x.unidad)+" en la factura</small>":x.ultima?"<small>última compra "+fD(x.ultima)+" · "+fmt.format(x.unidades)+" "+uni(x.unidad)+" en 6 meses</small>":"")+
+      '</span><span class="cl">'+esc(x.clave||"")+"</span></button>").join("")||'<div class="dsub">Sin coincidencias</div>';
+    r.querySelectorAll("button").forEach(b=>b.onclick=()=>{F.art=arr[+b.dataset.i];if(!F.fija)F.fac=null;pintarArticulo()})};
+  const filtrar=()=>{const s=q.value.trim().toLowerCase(), propias=base.filter(x=>!s||(x.nombre+" "+(x.clave||"")).toLowerCase().includes(s));
+    if(deFactura){mostrar(propias,"Artículos de la factura "+F.fac.folio+(s?" que coinciden":""));return}
+    if(propias.length||!s) mostrar(propias.slice(0,40),base.length?"Comprados por este cliente en los últimos 6 meses"+(s?" que coinciden":""):"Este cliente no tiene facturas en los últimos 6 meses; busca el artículo.");
+    if(s.length>=2&&!propias.length){clearTimeout(t);t=setTimeout(async()=>{const k=++n;const x=(await llamar("dv_buscar_articulos",{q:s}).catch(()=>[])).filter(a=>!ya.has(a.articulo_id));if(k===n) mostrar(x,"Otros artículos (el cliente no los compró en 6 meses)")},300)}};
   q.oninput=filtrar; filtrar(); setTimeout(()=>q.focus(),30);
 }
 async function pintarFacturas(){
-  const box=$("dfac"); $("dpfac").hidden=false; box.innerHTML='<div class="cargando" style="padding:10px 0">Buscando facturas…</div>';
+  const box=$("dfac"); $("dpfac").hidden=false;
+  if(F.fija){ // la factura ya quedó fija por el primer artículo
+    box.innerHTML='<div class="dsel"><span>'+(F.fac?"<b>"+esc(F.fac.folio)+"</b> · "+fD(F.fac.fecha):"Sin factura")+"</span></div>";
+    if(F.fac){const u=F.art.unidades; F.fac={...F.fac,unidades:u!=null?u:null}}
+    $("dpcan").hidden=false; $("duni").textContent=(F.art.unidad||"").toLowerCase(); botones(); revisarCant(); return}
+  box.innerHTML='<div class="cargando" style="padding:10px 0">Buscando facturas…</div>';
   try{F.facs=await llamar("dv_facturas",{cli:F.cli.cliente_id,art:F.art.articulo_id})}catch(e){F.facs=[]}
   if(!F.fac) F.fac=F.facs[0]||null;
-  box.innerHTML='<div class="dfacs">'+F.facs.map((f,i)=>'<label><input type="radio" name="dfac" value="'+i+'"'+(F.fac===f?" checked":"")+"><span><b>"+esc(f.folio)+"</b> · "+fD(f.fecha)+" · "+fmt.format(f.unidades)+" "+esc((F.art.unidad||"").toLowerCase())+" a "+dinero(f.precio_unitario)+(i===0?" · la más reciente":"")+"</span></label>").join("")+
+  box.innerHTML='<div class="dfacs">'+F.facs.map((f,i)=>'<label><input type="radio" name="dfac" value="'+i+'"'+(F.fac===f?" checked":"")+"><span><b>"+esc(f.folio)+"</b> · "+fD(f.fecha)+" · "+fmt.format(f.unidades)+" "+uni(F.art.unidad)+(i===0?" · la más reciente":"")+"</span></label>").join("")+
     '<label><input type="radio" name="dfac" value="-1"'+(!F.fac?" checked":"")+"><span>No aparece la factura / sin factura</span></label></div>"+
     (F.facs.length?"":'<div class="dsub">No encontré facturas de este artículo para el cliente en los últimos 6 meses.</div>');
-  box.querySelectorAll('input[name="dfac"]').forEach(x=>x.onchange=()=>{F.fac=+x.value>=0?F.facs[+x.value]:null;revisarCant()});
-  $("dpcan").hidden=false; $("duni").textContent=(F.art.unidad||"").toLowerCase(); revisarCant();
+  box.querySelectorAll('input[name="dfac"]').forEach(x=>x.onchange=()=>{F.fac=+x.value>=0?F.facs[+x.value]:null;botones();revisarCant()});
+  $("dpcan").hidden=false; $("duni").textContent=(F.art.unidad||"").toLowerCase(); botones(); revisarCant();
 }
+function botones(){$("dotro").textContent=F.fac?"Agregar otro artículo de la misma factura":"Agregar otro artículo"}
 function revisarCant(){
   const c=+$("dcant").value, w=$("dwarn");
-  if(F.fac&&c>F.fac.unidades){w.textContent="La cantidad es mayor que lo facturado en "+F.fac.folio+" ("+fmt.format(F.fac.unidades)+").";w.hidden=false} else w.hidden=true;
+  if(F.fac&&F.fac.unidades!=null&&c>F.fac.unidades){w.textContent="La cantidad es mayor que lo facturado en "+F.fac.folio+" ("+fmt.format(F.fac.unidades)+").";w.hidden=false} else w.hidden=true;
+}
+function lineaActual(){
+  const c=+$("dcant").value, m=$("dmot").value;
+  if(!F.art){aviso("Elige el artículo");return null}
+  if(!(c>0)){aviso("Escribe la cantidad a devolver");return null}
+  if(!m){aviso("Elige el motivo");return null}
+  const f=F.fac;
+  return {cliente_id:F.cli.cliente_id,cliente_nombre:F.cli.nombre,articulo_id:F.art.articulo_id,articulo_clave:F.art.clave,articulo_nombre:F.art.nombre,
+    unidad:F.art.unidad,cantidad:c,motivo:m,comentario:$("dcom").value,factura_docto:f?f.docto_ve_id:"",factura_folio:f?f.folio:"",
+    factura_fecha:f?f.fecha:"",factura_unidades:f&&f.unidades!=null?f.unidades:"",precio_unitario:f&&f.precio_unitario!=null?f.precio_unitario:""};
+}
+function agregarOtro(){
+  const l=lineaActual(); if(!l) return;
+  F.lineas.push(l); F.fija=true; F.art=null; limpiarLinea(); // el motivo se queda igual para el siguiente
+  aviso("Artículo agregado; elige el siguiente"); pintarCliente(); $("dnueva").scrollIntoView({block:"start"});
 }
 async function guardar(){
-  const c=+$("dcant").value, m=$("dmot").value;
-  if(!F.cli||!F.art){aviso("Elige el cliente y el artículo");return}
-  if(!(c>0)){aviso("Escribe la cantidad a devolver");return}
-  if(!m){aviso("Elige el motivo");return}
+  if(!F.cli){aviso("Elige el cliente");return}
+  let ls=F.lineas.slice();
+  if(F.art||!ls.length){const l=lineaActual(); if(!l) return; ls.push(l)}
   const b=$("dguardar"); b.disabled=true;
   try{
-    await llamar("dv_crear",{d:{cliente_id:F.cli.cliente_id,cliente_nombre:F.cli.nombre,articulo_id:F.art.articulo_id,articulo_clave:F.art.clave,articulo_nombre:F.art.nombre,
-      unidad:F.art.unidad,cantidad:c,motivo:m,comentario:$("dcom").value,factura_docto:F.fac?F.fac.docto_ve_id:"",factura_folio:F.fac?F.fac.folio:"",
-      factura_fecha:F.fac?F.fac.fecha:"",factura_unidades:F.fac?F.fac.unidades:"",precio_unitario:F.fac?F.fac.precio_unitario:""}});
-    aviso("Devolución registrada; queda por recibir en almacén");
-    // listo para otra del mismo cliente
-    F.art=null;F.fac=null;$("dcant").value="";$("dmot").value="";$("dcom").value="";$("dwarn").hidden=true;
-    pintarArticulo(); await cargarLista(); pintar();
+    const g=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():"";
+    try{await llamar("dv_crear_varios",{d:{grupo:g,lineas:ls}})}
+    catch(e){ // sin supabase/09: uno por uno (solo si es un artículo)
+      if(ls.length>1||!/dv_crear_varios/.test(e.message)) throw e; await llamar("dv_crear",{d:ls[0]})}
+    aviso(ls.length>1?"Devolución de "+ls.length+" artículos registrada; queda por recibir en almacén":"Devolución registrada; queda por recibir en almacén");
+    reiniciar(); $("dmot").value=""; pintarCliente(); await cargarLista(); pintar();
   }catch(e){aviso(e.message)} finally{b.disabled=false}
 }
 })();
