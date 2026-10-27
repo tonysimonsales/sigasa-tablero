@@ -206,8 +206,8 @@ async function reporteUso(){
   $("uper").onchange=()=>cargarUso(); await cargarUso();
 }
 async function cargarUso(){
-  const dias=+$("uper").value, h=new Date(); h.setHours(0,0,0,0);
-  const desde=new Date(h.getTime()-(dias===0?0:dias===1?1:dias-1)*864e5);
+  const v=$("uper").value, dias=+v, h=new Date(); h.setHours(0,0,0,0);
+  const desde=v==="m"?new Date(h.getFullYear(),h.getMonth(),1):new Date(h.getTime()-(dias===0?0:dias===1?1:dias-1)*864e5);
   const {data,error}=await sb.rpc("reporte_uso",{desde:desde.toISOString()});
   if(error){$("uresumen").innerHTML='<div class="cargando">No se pudo cargar el uso: '+esc(error.message)+"</div>";return}
   let filas=data; if(dias===1) filas=filas.map(r=>r.inicio&&new Date(r.inicio)>=h?Object.assign({},r,{sesion:null,inicio:null,segundos:null}):r);

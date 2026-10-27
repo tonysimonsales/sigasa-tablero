@@ -438,7 +438,7 @@ input.busq{flex:1 1 220px;min-width:0}
   <div id="pUso" class="pestana" role="tabpanel" aria-labelledby="tabU" hidden>
     <section class="panel controles" aria-label="Periodo de uso">
       <div class="fila"><div class="campo"><label class="etq" for="uper">Periodo</label>
-        <select id="uper"><option value="0">Hoy</option><option value="1">Ayer</option><option value="7" selected>Últimos 7 días</option><option value="30">Últimos 30 días</option></select></div></div>
+        <select id="uper"><option value="0">Hoy</option><option value="1">Ayer</option><option value="7">Últimos 7 días</option><option value="m" selected>Este mes</option><option value="30">Últimos 30 días</option></select></div></div>
     </section>
     <section class="cresumen" id="uresumen" aria-live="polite"><div class="cargando">Cargando uso…</div></section>
     <section class="panel desg">
@@ -527,7 +527,9 @@ function iniciar(){
     for(let i=ult;i>=primero;i--){const op=document.createElement("option");op.value=i;op.textContent=mesTxt(M[i]);s.appendChild(op)}
   }
   const finMes=new Date(+y,+m,0).getDate(), parcial=+d<finMes;
-  st.hasta=parcial&&ult>primero?ult-1:ult; st.desde=Math.max(primero,st.hasta-1);
+  // Por omisión: el mes en curso (o el último mes con datos si el mes en curso aún no tiene)
+  const hoyM=((d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"))(new Date())), im=M.indexOf(hoyM);
+  st.hasta=im>=primero?im:ult; st.desde=st.hasta;
   if(parcial){const o=$("hasta").querySelector('option[value="'+ult+'"]'),o2=$("desde").querySelector('option[value="'+ult+'"]');
     if(o)o.textContent+=" (al "+(+d)+")"; if(o2)o2.textContent+=" (al "+(+d)+")";}
   $("desde").value=st.desde; $("hasta").value=st.hasta;
@@ -826,7 +828,9 @@ function iniciar(){
   sel.innerHTML='<option value="A">Año a la fecha '+anio+"</option>"+M.map((m,i)=>i).reverse().map(i=>{const[y,mm]=M[i].split("-");return '<option value="'+i+'">'+MESL[+mm-1]+" "+y+"</option>"}).join("");
   const [cy,cm,cd]=C.corte.split("-"), parcial=+cd<new Date(+cy,+cm,0).getDate();
   if(parcial){const o=sel.querySelector('option[value="'+ult+'"]'); if(o) o.textContent+=" (al "+(+cd)+")";}
-  st.per=String(parcial&&ult>0?ult-1:ult); sel.value=st.per;
+  // Por omisión: el mes en curso (o el último mes con datos)
+  const im=M.indexOf(((d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"))(new Date())));
+  st.per=String(im>=0?im:ult); sel.value=st.per;
   sel.onchange=e=>{st.per=e.target.value;pintar()};
   const ds=$("cdimsel");
   for(const d of DIMS){const b=document.createElement("button");b.type="button";b.textContent=d.t;b.dataset.k=d.k;
@@ -1183,8 +1187,11 @@ window.PANEL=window.PANEL||{};
 window.PANEL.almacen=()=>prom||(prom=cargar().catch(e=>{$("aresumen").innerHTML='<div class="cargando">'+esc(e.message)+"</div>"}));
 
 function iniciar(){
-  for(const id of ["ades","ahas"]){const e=$(id);e.min=D.desde;e.max=D.corte}
-  st.des=D.desde; st.has=D.corte; $("ades").value=st.des; $("ahas").value=st.has;
+  // Por omisión: del 1 al último día del mes en curso (o del mes del corte si el mes en curso aún no tiene datos)
+  let mes=((d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"))(new Date())); if(mes+"-01">D.corte) mes=D.corte.slice(0,7);
+  const fin=mes+"-"+String(new Date(+mes.slice(0,4),+mes.slice(5,7),0).getDate()).padStart(2,"0");
+  for(const id of ["ades","ahas"]){const e=$(id);e.min=D.desde;e.max=fin>D.corte?fin:D.corte}
+  st.des=mes+"-01"<D.desde?D.desde:mes+"-01"; st.has=fin; $("ades").value=st.des; $("ahas").value=st.has;
   $("ades").onchange=e=>{st.des=e.target.value||D.desde;if(st.des>st.has){st.has=st.des;$("ahas").value=st.has}pintar()};
   $("ahas").onchange=e=>{st.has=e.target.value||D.corte;if(st.has<st.des){st.des=st.has;$("ades").value=st.des}pintar()};
   $("avia").onclick=selectorVias;
