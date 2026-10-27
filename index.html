@@ -139,8 +139,9 @@ tfoot td:first-child{background:var(--surface-2)}
 }
 
 /* Pestañas */
-.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-top:-4px}
-.tabs button{border:0;background:none;padding:10px 14px;font-family:var(--f-display);font-size:1.05rem;font-weight:600;color:var(--ink-3);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-top:-4px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:none;white-space:nowrap;border:0;background:none;padding:10px 14px;font-family:var(--f-display);font-size:1.05rem;font-weight:600;color:var(--ink-3);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
 .tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 .pestana{display:grid;gap:14px;min-width:0}
 .pestana>*{min-width:0}
@@ -289,6 +290,69 @@ input.busq{flex:1 1 220px;min-width:0}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:var(--r);z-index:30;font-size:.9rem;max-width:calc(100% - 32px)}
 @media (max-width:720px){.rdias{display:flex}.cal{grid-template-columns:1fr}.cal .dia:not(.sel){display:none}}
 
+/* CxP: antigüedad de cuentas por pagar y selección de facturas a pagar */
+#pCxp{padding-bottom:84px}
+#xresumen{grid-template-columns:repeat(3,1fr)}
+#xresumen .cifra.sel{border-color:var(--accent);background:var(--accent-soft)}
+.xopc{display:inline-flex;align-items:center;gap:8px;font-size:.88rem;color:var(--ink-2);cursor:pointer;min-height:40px}
+.xopc input{width:18px;height:18px;accent-color:var(--accent)}
+#xven,#xvista{flex-wrap:wrap}
+#xtab{min-width:900px}
+#xtab td,#xtab th{padding:7px 9px}
+#xtab th.ck,#xtab td.ck{width:38px;text-align:center;padding:4px;position:sticky;left:0;z-index:1;background:var(--surface)}
+#xtab th.ck{background:var(--surface-2);z-index:2}
+#xtab td.ck input,#xtab th.ck input{width:18px;height:18px;accent-color:var(--accent);cursor:pointer;vertical-align:middle}
+#xtab th:nth-child(2),#xtab td:nth-child(2){position:static;text-align:left;max-width:300px;overflow:hidden;text-overflow:ellipsis}
+#xtab th:nth-child(3),#xtab td:nth-child(3){text-align:left}
+#xtab td.pv{min-width:220px;max-width:320px;overflow:hidden;text-overflow:ellipsis}
+#xtab td.pv .sub{overflow:hidden;text-overflow:ellipsis}
+#xtab tr.on td{background:var(--accent-soft)}
+#xtab tr.on td.ck{background:var(--accent-soft)}
+#xtab tr.grupo td{background:var(--surface-2);font-weight:600;border-top:1px solid var(--line)}
+#xtab tr.grupo td.ck{background:var(--surface-2)}
+#xtab tr.grupo.on td{background:color-mix(in srgb,var(--accent-soft) 70%,var(--surface-2))}
+#xtab tr.det td:nth-child(2){padding-left:22px;font-weight:400;color:var(--ink-2)}
+#xtab td.at{color:var(--ink-3)}
+#xtab td.at.v1{color:var(--s2);font-weight:600}
+#xtab td.at.v2,#xtab td.at.v3{color:var(--bad);font-weight:600}
+#xtab td.cero{color:var(--line)}
+.pp{display:inline-block;font-size:.7rem;font-weight:600;border-radius:999px;padding:0 7px;border:1px solid var(--good);color:var(--good);margin-left:6px;white-space:nowrap}
+/* Barra de pago fija abajo */
+.xpago{position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -4px 16px rgba(0,0,0,.08)}
+.xpago .in{max-width:1180px;margin:0 auto;padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center}
+.xpago .cuantas{color:var(--ink-2);font-size:.88rem}
+.xpago .tot{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:1.35rem;font-weight:500}
+.xpago label{display:inline-flex;align-items:center;gap:8px;font-size:.85rem;color:var(--ink-2)}
+.xpago input{width:150px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;min-height:40px;font-family:var(--f-num);text-align:right}
+.xpago .edo{font-size:.88rem;font-weight:600}
+.xpago .edo.ok{color:var(--good)} .xpago .edo.mal{color:var(--bad)}
+.xpago .acc{margin-left:auto;display:flex;gap:8px}
+/* Hoja del resumen de pago */
+.hoja.xres{width:min(900px,100%)}
+.xres .cuerpo{overflow:auto;padding:12px 14px;display:grid;gap:12px}
+.xres .meta{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end}
+.xres .meta label{display:grid;gap:4px;font-size:.78rem;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.xres .meta input{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;min-height:40px;text-transform:none;letter-spacing:0}
+.xres table{min-width:0}
+.xres td,.xres th{padding:6px 8px;font-size:.86rem;position:static!important}
+.xres td:first-child,.xres th:first-child{max-width:none;white-space:normal}
+.xres tr.pr td{background:var(--surface-2);font-weight:600}
+.xres td input{width:130px;text-align:right;font-family:var(--f-num);background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:5px 8px}
+.xres td input.parcial{border-color:var(--s2);color:var(--s2)}
+.xres textarea{width:100%;min-height:200px;font-family:var(--f-num);font-size:.82rem;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:10px;resize:vertical}
+.xres .quitar{border:0;background:none;color:var(--ink-3);cursor:pointer;padding:2px 6px;font-size:1rem}
+@media (max-width:720px){
+  #xresumen{grid-template-columns:1fr 1fr}
+  .xpago .in{display:grid;grid-template-columns:1fr auto;gap:6px 10px;padding:8px 16px}
+  .xpago .tot{font-size:1.1rem}
+  .xpago .cuantas{font-size:.8rem}
+  .xpago label{grid-column:1;font-size:.8rem}
+  .xpago input{width:120px;min-height:36px;padding:5px 8px}
+  .xpago .edo{grid-column:2;grid-row:2;font-size:.8rem;text-align:right}
+  .xpago .acc{grid-column:2;grid-row:1;margin-left:0}
+  .xpago .acc button{min-height:36px;padding:7px 12px}
+  #pCxp{padding-bottom:120px}
+}
 </style>
 
 <style>
@@ -323,6 +387,7 @@ input.busq{flex:1 1 220px;min-width:0}
     <button type="button" role="tab" id="tabV" aria-selected="false" aria-controls="pVentas">Ventas</button>
     <button type="button" role="tab" id="tabC" aria-selected="false" aria-controls="pCobranza">Cobranza</button>
     <button type="button" role="tab" id="tabA" aria-selected="false" aria-controls="pAlmacen">Almacén</button>
+    <button type="button" role="tab" id="tabX" aria-selected="false" aria-controls="pCxp" hidden>CxP</button>
     <button type="button" role="tab" id="tabD" aria-selected="false" aria-controls="pDevol" hidden>Devoluciones <span class="badge" id="dbadge" hidden></span></button>
     <button type="button" role="tab" id="tabU" aria-selected="false" aria-controls="pUso" hidden>Uso</button>
   </nav>
@@ -459,6 +524,35 @@ input.busq{flex:1 1 220px;min-width:0}
       <div class="cal" id="rcal"></div>
       <p class="aviso">Toca un cliente para ver el resumen de su cuenta. Número = orden de visita del día.</p>
     </section>
+  </div>
+  <div id="pCxp" class="pestana" role="tabpanel" aria-labelledby="tabX" hidden>
+    <section class="panel controles" aria-label="Filtros de cuentas por pagar">
+      <div class="fila">
+        <div class="campo" style="flex:0 1 240px"><span class="etq">Tipo de proveedor</span><button type="button" class="fbtn" id="xtipo" style="width:100%"><span class="v">Todos</span></button></div>
+        <div class="campo" style="flex:1 1 280px"><span class="etq">Proveedores</span><button type="button" class="fbtn" id="xprov" style="width:100%"><span class="v">Todos</span></button></div>
+      </div>
+      <div class="fila">
+        <div class="campo"><span class="etq">Vencimiento</span><div class="seg" role="group" aria-label="Vencimiento" id="xven"></div></div>
+        <div class="campo"><span class="etq">Vista</span><div class="seg" role="group" aria-label="Vista" id="xvista"></div></div>
+      </div>
+      <div class="fila">
+        <input type="search" id="xbus" placeholder="Buscar proveedor, folio o factura" aria-label="Buscar factura" class="busq">
+        <label class="xopc"><input type="checkbox" id="xviejas" checked>Ocultar saldos con más de un año de atraso</label>
+      </div>
+    </section>
+    <section class="cresumen" id="xresumen" aria-live="polite"><div class="cargando">Cargando cuentas por pagar…</div></section>
+    <section class="panel desg">
+      <div class="ghead"><h2 id="xtit">Facturas</h2>
+        <div class="chips"><button type="button" class="link" id="xtodas">Seleccionar las visibles</button><button type="button" class="link" id="xninguna">Quitar selección</button></div></div>
+      <div class="tabla-w"><table id="xtab"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
+      <p class="aviso" id="xnota"></p>
+    </section>
+    <div class="xpago" id="xpago" hidden><div class="in">
+      <div><div class="cuantas" id="xcuantas">Ninguna factura seleccionada</div><div class="tot" id="xtotal">$0.00</div></div>
+      <label>Fondos disponibles<input type="text" id="xfondos" inputmode="decimal" placeholder="$0.00" autocomplete="off"></label>
+      <div class="edo" id="xedo"></div>
+      <div class="acc"><button type="button" class="prim" id="xresumir">Resumen para correo</button></div>
+    </div></div>
   </div>
 </div>
 <div id="velo" class="velo" hidden></div>
@@ -788,7 +882,7 @@ const dec=(v,n)=>v==null||!isFinite(v)?"—":v.toFixed(n);
 const mesTxt=m=>{const[y,mm]=m.split("-");return MESN[+mm-1]+" "+y};
 
 /* Pestañas */
-const tabs=[["tabV","pVentas"],["tabC","pCobranza"],["tabR","pVisitas"],["tabA","pAlmacen"],["tabD","pDevol"],["tabU","pUso"]];
+const tabs=[["tabV","pVentas"],["tabC","pCobranza"],["tabR","pVisitas"],["tabA","pAlmacen"],["tabX","pCxp"],["tabD","pDevol"],["tabU","pUso"]];
 let prom=null; const asegurar=()=>prom||(prom=cargar());
 function mostrar(id){
   for(const [t,p] of tabs){const on=t===id;$(t).setAttribute("aria-selected",on);$(p).hidden=!on}
@@ -797,6 +891,7 @@ function mostrar(id){
   if(id==="tabR"&&window.PANEL.visitas) window.PANEL.visitas();
   if(id==="tabU"&&window.PANEL.uso) window.PANEL.uso();
   if(id==="tabA"&&window.PANEL.almacen) window.PANEL.almacen();
+  if(id==="tabX"&&window.PANEL.cxp) window.PANEL.cxp();
   if(id==="tabD"&&window.PANEL.devoluciones) window.PANEL.devoluciones();
   window.scrollTo({top:0});
 }
@@ -1549,5 +1644,277 @@ async function guardar(){
     reiniciar(); $("dmot").value=""; pintarCliente(); await cargarLista(); pintar();
   }catch(e){aviso(e.message)} finally{b.disabled=false}
 }
+})();
+</script>
+<script>
+(function(){
+"use strict";
+/* Pestaña CxP: antigüedad de cuentas por pagar (como el reporte de Microsip) y selección de facturas a pagar.
+   Datos: cxp.json (o FUENTE.cxp en la versión web). Selección: compartida en Supabase (PANEL.cxpSel) o en este navegador. */
+const $=s=>document.getElementById(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const MX=new Intl.NumberFormat("es-MX",{minimumFractionDigits:2,maximumFractionDigits:2});
+const N0=new Intl.NumberFormat("es-MX",{maximumFractionDigits:0});
+const pesos=v=>(v<0?"−$":"$")+MX.format(Math.abs(v));
+const fD=s=>s?s.slice(8,10)+"/"+s.slice(5,7)+"/"+s.slice(0,4):"";
+const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const dia=s=>{const[y,m,d]=s.split("-");return Date.UTC(+y,+m-1,+d)/864e5};
+const HOY=window.CXP_HOY||iso(new Date());
+// Atraso como Microsip: (fecha del reporte + 1) − vencimiento; 0 si aún no vence
+const atraso=v=>Math.max(0,dia(HOY)+1-dia(v));
+const tramo=a=>a===0?0:a<=30?1:a<=60?2:3;
+const TRAMOS=["Por vencer","1-30 días","31-60 días","61 o más"];
+const VEN=[["T","Todas",()=>true],["V","Vencidas",a=>a>0],["7","Vencidas + 7 días",(a,v)=>a>0||dia(v)<=dia(HOY)+7],
+  ["15","Vencidas + 15 días",(a,v)=>a>0||dia(v)<=dia(HOY)+15],["P","Por vencer",a=>a===0]];
+const VISTAS=[["V","Por vencimiento"],["P","Por proveedor"]];
+let D=null, prom=null, docs=[], porId=new Map();
+const st={tipos:new Set(),provs:new Set(),ven:"T",vista:"V",bus:"",viejas:true,ord:{col:"v",dir:1}};
+const sel=new Map(); // id → {imp, quien}
+
+/* ---------- Guardado local (filtros, fondos y, sin Supabase, la selección) ---------- */
+const LS={g(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+  p(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const SEL=window.PANEL&&window.PANEL.cxpSel||{ // respaldo en el navegador
+  async listar(){return LS.g("cxp_sel",[])},
+  async poner(l){const m=new Map((LS.g("cxp_sel",[])).map(r=>[r.id,r]));for(const r of l)m.set(r.id,{id:r.id,imp:r.imp,quien:"Yo"});LS.p("cxp_sel",[...m.values()])},
+  async quitar(ids){const s=new Set(ids);LS.p("cxp_sel",LS.g("cxp_sel",[]).filter(r=>!s.has(r.id)))}};
+const guardarFiltros=()=>LS.p("cxp_filtros",{tipos:[...st.tipos].map(i=>D.tipos[i]),provs:[...st.provs].map(i=>D.provs[i][0]),ven:st.ven,vista:st.vista,viejas:st.viejas});
+
+async function cargar(){
+  if(window.FUENTE&&window.FUENTE.cxp) D=await window.FUENTE.cxp();
+  else{const r=await fetch("cxp.json"); if(!r.ok) throw new Error("No se pudieron cargar las cuentas por pagar."); D=await r.json();}
+  if(!D.docs||!D.docs.length) throw new Error("Todavía no hay cuentas por pagar cargadas.");
+  docs=D.docs.map(x=>{const a=atraso(x[6]);return {id:x[0],p:x[1],f:x[2],fp:x[3],c:x[4],fe:x[5],v:x[6],s:x[7],dp:x[8],cond:x[9]||"",a,t:tramo(a)}});
+  porId=new Map(docs.map(d=>[d.id,d]));
+  // Filtros: los guardados en este navegador o, la primera vez, los habituales (tipo Ferretería + proveedores del reporte)
+  const g=LS.g("cxp_filtros",null);
+  if(g){const it=new Map(D.tipos.map((n,i)=>[n,i])), ip=new Map(D.provs.map((p,i)=>[p[0],i]));
+    st.tipos=new Set(g.tipos.map(n=>it.get(n)).filter(i=>i!==undefined)); st.provs=new Set(g.provs.map(n=>ip.get(n)).filter(i=>i!==undefined));
+    st.ven=g.ven||"T"; st.vista=g.vista||"V"; st.viejas=g.viejas!==false}
+  else{if(D.tipo_hab>=0) st.tipos=new Set([D.tipo_hab]); st.provs=new Set(D.habituales||[])}
+  await leerSel(); iniciar();
+}
+async function leerSel(){
+  try{const l=await SEL.listar(); sel.clear(); for(const r of l) sel.set(r.id,{imp:+r.imp,quien:r.quien||""})}
+  catch(e){console.warn("No se pudo leer la selección:",e.message)}
+}
+window.PANEL=window.PANEL||{};
+window.PANEL.cxp=()=>{
+  if(prom) return prom.then(async()=>{if(D){await leerSel();pintar()}});
+  return prom=cargar().catch(e=>{$("xresumen").innerHTML='<div class="cargando">'+esc(e.message)+"</div>"});
+};
+
+function iniciar(){
+  $("xven").innerHTML=VEN.map(v=>'<button type="button" data-k="'+v[0]+'">'+v[1]+"</button>").join("");
+  $("xven").querySelectorAll("button").forEach(b=>b.onclick=()=>{st.ven=b.dataset.k;guardarFiltros();pintar()});
+  $("xvista").innerHTML=VISTAS.map(v=>'<button type="button" data-k="'+v[0]+'">'+v[1]+"</button>").join("");
+  $("xvista").querySelectorAll("button").forEach(b=>b.onclick=()=>{st.vista=b.dataset.k;guardarFiltros();pintar()});
+  $("xbus").oninput=e=>{st.bus=e.target.value.trim().toLowerCase();pintar()};
+  $("xviejas").checked=st.viejas; $("xviejas").onchange=e=>{st.viejas=e.target.checked;guardarFiltros();pintar()};
+  $("xtipo").onclick=()=>selector("tipos"); $("xprov").onclick=()=>selector("provs");
+  $("xtodas").onclick=()=>marcar(visibles(),true); $("xninguna").onclick=()=>marcar([...sel.keys()].map(id=>porId.get(id)||{id}),false);
+  $("xfondos").value=LS.g("cxp_fondos","")?MX.format(LS.g("cxp_fondos",0)):"";
+  $("xfondos").oninput=()=>{LS.p("cxp_fondos",numero($("xfondos").value));pintarPago()};
+  $("xfondos").onblur=()=>{const v=numero($("xfondos").value);$("xfondos").value=v?MX.format(v):""};
+  $("xresumir").onclick=resumen;
+  $("xpago").hidden=false;
+  pintar();
+}
+const numero=s=>{const v=parseFloat(String(s).replace(/[^0-9.\-]/g,""));return isFinite(v)?v:0};
+
+/* ---------- Filtro ---------- */
+function filtrados(){
+  const vf=VEN.find(v=>v[0]===st.ven)[2], q=st.bus;
+  return docs.filter(d=>(!st.tipos.size||st.tipos.has(D.provs[d.p][1]))&&(!st.provs.size||st.provs.has(d.p))&&
+    vf(d.a,d.v)&&!(st.viejas&&d.a>365)&&
+    (!q||(D.provs[d.p][0]+" "+d.f+" "+d.fp+" "+d.c).toLowerCase().includes(q)));
+}
+let ultimos=[]; const visibles=()=>ultimos;
+const ORD={p:d=>D.provs[d.p][0],f:d=>d.f,c:d=>d.c,v:d=>d.v,a:d=>d.a,s:d=>d.s};
+
+/* ---------- Pintado ---------- */
+function pintar(){
+  for(const b of $("xven").children) b.setAttribute("aria-pressed",b.dataset.k===st.ven);
+  for(const b of $("xvista").children) b.setAttribute("aria-pressed",b.dataset.k===st.vista);
+  const nt=st.tipos.size, np=st.provs.size;
+  $("xtipo").classList.toggle("on",nt>0); $("xtipo").querySelector(".v").textContent=nt===0?"Todos los tipos":nt===1?D.tipos[[...st.tipos][0]]:nt+" tipos";
+  const hab=new Set(D.habituales||[]), esHab=np&&np===hab.size&&[...st.provs].every(i=>hab.has(i));
+  $("xprov").classList.toggle("on",np>0); $("xprov").querySelector(".v").textContent=np===0?"Todos los proveedores":np===1?D.provs[[...st.provs][0]][0]:esHab?np+" proveedores habituales":np+" proveedores";
+  const L=filtrados(); ultimos=L;
+  const t=[0,0,0,0]; for(const d of L) t[d.t]+=d.s;
+  const tot=t.reduce((a,b)=>a+b,0), prov=new Set(L.map(d=>d.p)).size;
+  const tiles=[["Total del filtro",pesos(tot),N0.format(L.length)+" facturas · "+N0.format(prov)+" proveedores",""],
+    ["Por vencer",pesos(t[0]),pct(t[0],tot),""],["1-30 días",pesos(t[1]),pct(t[1],tot),""],
+    ["31-60 días",pesos(t[2]),pct(t[2],tot),""],["61 o más",pesos(t[3]),pct(t[3],tot),""],
+    ["Seleccionado para pago",pesos(totalSel()),N0.format(sel.size)+" facturas","sel"]];
+  $("xresumen").innerHTML=tiles.map(([k,m,r,c])=>'<div class="cifra '+c+'"><div class="k">'+k+'</div><div class="m">'+m+'</div><div class="ref">'+r+"</div></div>").join("");
+  $("xtit").textContent=(st.vista==="P"?"Por proveedor":"Por vencimiento")+" ("+N0.format(L.length)+")";
+  if(st.vista==="P") tablaProveedor(L); else tablaVence(L);
+  const huerf=[...sel.keys()].filter(id=>!porId.has(id));
+  $("xnota").innerHTML="Saldos de Microsip al cierre del "+fD(D.corte)+"; los pagos capturados después aparecen al día siguiente. Atraso al "+fD(HOY)+", calculado como en el reporte de Microsip. "+
+    "Toca una factura para seleccionarla. "+(window.PANEL.cxpSel?"La selección es compartida: la ven todos los que tienen esta pestaña.":"La selección se guarda en este navegador.")+
+    (huerf.length?' <b>'+huerf.length+' seleccionadas ya no tienen saldo (probablemente se pagaron).</b> <button type="button" class="link" id="xlimpia">Quitarlas</button>':"");
+  if(huerf.length) $("xlimpia").onclick=async()=>{await SEL.quitar(huerf);huerf.forEach(id=>sel.delete(id));pintar()};
+  pintarPago();
+}
+const pct=(v,t)=>t?(v/t*100).toFixed(1)+"% del filtro":"—";
+const celdas=d=>[0,1,2,3].map(k=>'<td class="n'+(d.t===k?"":" cero")+'">'+(d.t===k?MX.format(d.s):"")+"</td>").join("");
+const atrasoTd=d=>'<td class="n at v'+d.t+'">'+N0.format(d.a)+"</td>";
+const ppTag=d=>d.dp&&d.dp[0]>=HOY?'<span class="pp" title="Descuento por pronto pago">−'+d.dp[1]+"% al "+fD(d.dp[0]).slice(0,5)+"</span>":"";
+function encabezado(conProv){
+  const o=st.ord, h=(c,t)=>'<th data-col="'+c+'" aria-sort="'+(o.col===c?(o.dir<0?"descending":"ascending"):"none")+'">'+t+(o.col===c?(o.dir<0?" ↓":" ↑"):"")+"</th>";
+  return '<tr><th class="ck"><input type="checkbox" id="xck" aria-label="Seleccionar todas las visibles"></th>'+(conProv?h("p","Proveedor"):"<th>Proveedor</th>")+
+    h("f","Folio")+h("v","Vence")+h("a","Atraso")+TRAMOS.map(t=>"<th>"+t+"</th>").join("")+"</tr>";
+}
+function fila(d,clase){
+  const on=sel.has(d.id), p=D.provs[d.p];
+  return '<tr class="'+(clase||"")+(on?" on":"")+'" data-id="'+d.id+'"><td class="ck"><input type="checkbox" '+(on?"checked":"")+' aria-label="Seleccionar folio '+esc(d.f)+'"></td>'+
+    '<td class="pv" title="'+esc(p[0])+'">'+(clase==="det"?(d.cond?'<span class="sub">'+esc(d.cond)+"</span>":""):esc(p[0])+'<span class="sub">'+esc(D.tipos[p[1]])+(d.cond?" · "+esc(d.cond):"")+"</span>")+"</td>"+
+    "<td><b>"+esc(d.f)+"</b>"+(d.fp||(d.c&&d.c!=="Compra")?'<span class="sub">'+[d.fp?"Fact. "+esc(d.fp):"",d.c&&d.c!=="Compra"?esc(d.c):""].filter(Boolean).join(" · ")+"</span>":"")+"</td>"+
+    '<td class="n">'+fD(d.v)+ppTag(d)+"</td>"+atrasoTd(d)+celdas(d)+"</tr>";
+}
+function pie(L){
+  const t=[0,0,0,0]; for(const d of L) t[d.t]+=d.s;
+  return '<tr><td class="ck"></td><td>Total ('+N0.format(L.length)+')</td><td></td><td></td><td></td>'+t.map(v=>'<td class="n">'+MX.format(v)+"</td>").join("")+"</tr>";
+}
+function ordenar(L){const o=st.ord,k=ORD[o.col];
+  return L.slice().sort((a,b)=>{const x=k(a),y=k(b);const r=typeof x==="string"?x.localeCompare(y,"es"):x-y;return (r||a.v.localeCompare(b.v)||a.s-b.s)*o.dir})}
+function tablaVence(L){
+  const tb=$("xtab"); tb.tHead.innerHTML=encabezado(true);
+  tb.tBodies[0].innerHTML=ordenar(L).map(d=>fila(d)).join("")||vacio();
+  tb.tFoot.innerHTML=L.length?pie(L):"";
+  conectar(tb,L);
+}
+function tablaProveedor(L){
+  const tb=$("xtab"); tb.tHead.innerHTML=encabezado(false);
+  const g=new Map(); for(const d of L){if(!g.has(d.p)) g.set(d.p,[]); g.get(d.p).push(d)}
+  const grupos=[...g.entries()].sort((a,b)=>D.provs[a[0]][0].localeCompare(D.provs[b[0]][0],"es"));
+  tb.tBodies[0].innerHTML=grupos.map(([p,ds])=>{
+    const t=[0,0,0,0]; for(const d of ds) t[d.t]+=d.s;
+    const n=ds.filter(d=>sel.has(d.id)).length, todas=n===ds.length;
+    const ord=ds.slice().sort((a,b)=>a.v.localeCompare(b.v)||a.s-b.s);
+    return '<tr class="grupo'+(todas?" on":"")+'" data-p="'+p+'"><td class="ck"><input type="checkbox" '+(todas?"checked":"")+(n&&!todas?' data-ind="1"':"")+' aria-label="Seleccionar todas de '+esc(D.provs[p][0])+'"></td>'+
+      '<td class="pv">'+esc(D.provs[p][0])+'<span class="sub">'+ds.length+(ds.length===1?" factura · ":" facturas · ")+esc(D.tipos[D.provs[p][1]])+(n?" · "+n+" seleccionadas":"")+"</span></td><td></td>"+
+      '<td class="n">'+fD(ord[0].v)+'</td><td class="n at v'+Math.max(...ds.map(d=>d.t))+'">'+N0.format(Math.max(...ds.map(d=>d.a)))+"</td>"+
+      t.map(v=>'<td class="n">'+(v?MX.format(v):"")+"</td>").join("")+"</tr>"+ord.map(d=>fila(d,"det")).join("")}).join("")||vacio();
+  tb.tFoot.innerHTML=L.length?pie(L):"";
+  tb.tBodies[0].querySelectorAll("input[data-ind]").forEach(i=>i.indeterminate=true);
+  tb.tBodies[0].querySelectorAll("tr.grupo").forEach(tr=>tr.onclick=e=>{
+    const ds=g.get(+tr.dataset.p), todas=ds.every(d=>sel.has(d.id)); marcar(ds,!todas)});
+  conectar(tb,L);
+}
+const vacio=()=>'<tr><td colspan="9" style="text-align:center;color:var(--ink-3);position:static">Sin facturas con estos filtros</td></tr>';
+function conectar(tb,L){
+  tb.tHead.querySelectorAll("th[data-col]").forEach(th=>th.onclick=()=>{const c=th.dataset.col,o=st.ord;
+    st.ord=o.col===c?{col:c,dir:-o.dir}:{col:c,dir:(c==="a"||c==="s")?-1:1};pintar()});
+  const ck=$("xck"), n=L.filter(d=>sel.has(d.id)).length;
+  ck.checked=L.length>0&&n===L.length; ck.indeterminate=n>0&&n<L.length;
+  ck.onclick=e=>{e.stopPropagation();marcar(L,n<L.length)};
+  tb.tBodies[0].querySelectorAll("tr[data-id]").forEach(tr=>tr.onclick=()=>{const d=porId.get(+tr.dataset.id);marcar([d],!sel.has(d.id))});
+}
+
+/* ---------- Selección ---------- */
+async function marcar(ds,on){
+  ds=ds.filter(Boolean);
+  if(on){const nuevos=ds.filter(d=>!sel.has(d.id)&&d.s>0).map(d=>({id:d.id,imp:d.s}));
+    nuevos.forEach(r=>sel.set(r.id,{imp:r.imp,quien:"Yo"})); pintar();
+    if(nuevos.length) try{await SEL.poner(nuevos)}catch(e){aviso("No se guardó la selección: "+e.message)}}
+  else{const ids=ds.map(d=>d.id).filter(id=>sel.has(id)); ids.forEach(id=>sel.delete(id)); pintar();
+    if(ids.length) try{await SEL.quitar(ids)}catch(e){aviso("No se guardó la selección: "+e.message)}}
+}
+const totalSel=()=>{let t=0; for(const [id,r] of sel) if(porId.has(id)) t+=r.imp; return Math.round(t*100)/100};
+function pintarPago(){
+  const ids=[...sel.keys()].filter(id=>porId.has(id)), tot=totalSel(), np=new Set(ids.map(id=>porId.get(id).p)).size;
+  $("xcuantas").textContent=ids.length?N0.format(ids.length)+" facturas de "+N0.format(np)+(np===1?" proveedor":" proveedores")+" · total a pagar":"Ninguna factura seleccionada";
+  $("xtotal").textContent=pesos(tot);
+  const f=numero($("xfondos").value), e=$("xedo");
+  if(!f||!ids.length){e.textContent=f&&!ids.length?"Fondos: "+pesos(f):"";e.className="edo"}
+  else if(f>=tot){e.textContent="Alcanza · quedan "+pesos(f-tot);e.className="edo ok"}
+  else{e.textContent="Faltan "+pesos(tot-f);e.className="edo mal"}
+  $("xresumir").disabled=!ids.length;
+}
+
+/* ---------- Selector de tipos y proveedores ---------- */
+function selector(k){
+  const velo=$("velo"), s=new Set(st[k]), esP=k==="provs";
+  const cuenta=new Map(); for(const d of docs) if(!(st.viejas&&d.a>365)){const x=esP?d.p:D.provs[d.p][1]; cuenta.set(x,(cuenta.get(x)||0)+d.s)}
+  const todas=(esP?D.provs.map((p,i)=>({i,n:p[0]})):D.tipos.map((n,i)=>({i,n}))).filter(o=>cuenta.has(o.i)).sort((a,b)=>a.n.localeCompare(b.n,"es"));
+  velo.innerHTML='<div class="hoja" role="dialog" aria-modal="true" aria-label="Filtrar por '+(esP?"proveedor":"tipo")+'"><header><h3>'+(esP?"Proveedores":"Tipo de proveedor")+'</h3><button type="button" class="link" id="xscerrar">Cerrar</button></header>'+
+    (esP?'<div class="bus"><input type="search" id="xsbus" placeholder="Buscar proveedor" autocomplete="off"></div>':"")+'<ul id="xslista"></ul>'+
+    '<div class="pie"><span>'+(esP&&(D.habituales||[]).length?'<button type="button" class="link" id="xshab">Usar los habituales</button>':"")+'<button type="button" class="link" id="xslimpiar">Quitar selección</button></span><button type="button" class="prim" id="xsaplicar">Aplicar</button></div></div>';
+  const lista=q=>{$("xslista").innerHTML=todas.filter(o=>!q||o.n.toLowerCase().includes(q)).map(o=>'<li><label><input type="checkbox" data-i="'+o.i+'" '+(s.has(o.i)?"checked":"")+'><span class="tx">'+esc(o.n)+'</span><span class="cl" style="margin-left:auto">'+pesos(cuenta.get(o.i))+"</span></label></li>").join("");
+    $("xslista").querySelectorAll("input").forEach(i=>i.onchange=()=>{const n=+i.dataset.i;i.checked?s.add(n):s.delete(n)})};
+  lista("");
+  velo.hidden=false;
+  const cerrar=()=>{velo.hidden=true;velo.innerHTML=""};
+  $("xscerrar").onclick=cerrar; velo.onclick=e=>{if(e.target===velo)cerrar()};
+  if(esP){$("xsbus").oninput=e=>lista(e.target.value.trim().toLowerCase()); setTimeout(()=>$("xsbus").focus(),30)}
+  if($("xshab")) $("xshab").onclick=()=>{s.clear();(D.habituales||[]).forEach(i=>s.add(i));lista(esP?$("xsbus").value.trim().toLowerCase():"")};
+  $("xslimpiar").onclick=()=>{s.clear();lista(esP?$("xsbus").value.trim().toLowerCase():"")};
+  $("xsaplicar").onclick=()=>{st[k]=s;guardarFiltros();cerrar();pintar()};
+}
+
+/* ---------- Resumen para correo ---------- */
+function resumen(){
+  const velo=$("velo");
+  const fechaLarga=s=>{const[y,m,d]=s.split("-");return new Date(+y,+m-1,+d).toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long",year:"numeric"})};
+  velo.innerHTML='<div class="hoja xres" role="dialog" aria-modal="true" aria-label="Resumen de pago"><header><h3>Resumen de pago</h3><button type="button" class="link" id="xrcerrar">Cerrar</button></header>'+
+    '<div class="cuerpo"><div class="meta"><label>Fecha de pago<input type="date" id="xrfecha" value="'+HOY+'"></label>'+
+    '<label style="flex:1 1 260px">Nota (opcional)<input type="text" id="xrnota" placeholder="Ej. pagar por transferencia desde Banorte"></label></div>'+
+    '<div class="tabla-w"><table id="xrtab"><thead><tr><th>Proveedor / folio</th><th>Vence</th><th>Saldo</th><th>A pagar</th><th></th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>'+
+    '<textarea id="xrtexto" readonly aria-label="Texto del correo"></textarea></div>'+
+    '<div class="pie"><span class="aviso">Puedes cambiar el importe para un abono parcial.</span><span style="display:flex;gap:8px"><button type="button" class="btn" id="xrtxt">Copiar solo texto</button><button type="button" class="prim" id="xrcopiar">Copiar para correo</button></span></div></div>';
+  velo.hidden=false;
+  const cerrar=()=>{velo.hidden=true;velo.innerHTML="";pintar()};
+  $("xrcerrar").onclick=cerrar; velo.onclick=e=>{if(e.target===velo)cerrar()};
+  let txt="", html="";
+  const armar=()=>{
+    const ds=[...sel.keys()].filter(id=>porId.has(id)).map(id=>porId.get(id));
+    const g=new Map(); for(const d of ds){if(!g.has(d.p)) g.set(d.p,[]); g.get(d.p).push(d)}
+    const grupos=[...g.entries()].sort((a,b)=>D.provs[a[0]][0].localeCompare(D.provs[b[0]][0],"es")).map(([p,l])=>[p,l.sort((a,b)=>a.v.localeCompare(b.v)||a.s-b.s)]);
+    const imp=d=>sel.get(d.id).imp, tot=ds.reduce((a,d)=>a+imp(d),0), f=$("xrfecha").value||HOY, nota=$("xrnota").value.trim();
+    $("xrtab").tBodies[0].innerHTML=grupos.map(([p,l])=>'<tr class="pr"><td>'+esc(D.provs[p][0])+'</td><td></td><td></td><td class="n">'+MX.format(l.reduce((a,d)=>a+imp(d),0))+"</td><td></td></tr>"+
+      l.map(d=>'<tr data-id="'+d.id+'"><td>Folio '+esc(d.f)+(d.fp?" · Fact. "+esc(d.fp):"")+(sel.get(d.id).quien&&window.PANEL.cxpSel?'<span class="sub">seleccionó '+esc(sel.get(d.id).quien)+"</span>":"")+"</td>"+
+        '<td class="n">'+fD(d.v)+'</td><td class="n">'+MX.format(d.s)+'</td><td class="n"><input type="text" inputmode="decimal" value="'+MX.format(imp(d))+'" class="'+(imp(d)<d.s-0.005?"parcial":"")+'" aria-label="Importe a pagar"></td>'+
+        '<td><button type="button" class="quitar" aria-label="Quitar">✕</button></td></tr>').join("")).join("");
+    $("xrtab").tFoot.innerHTML='<tr><td>Total ('+ds.length+" facturas, "+grupos.length+' proveedores)</td><td></td><td></td><td class="n">'+MX.format(tot)+"</td><td></td></tr>";
+    $("xrtab").tBodies[0].querySelectorAll("tr[data-id]").forEach(tr=>{const id=+tr.dataset.id, d=porId.get(id);
+      const inp=tr.querySelector("input");
+      inp.onchange=async()=>{let v=Math.round(numero(inp.value)*100)/100; if(!(v>0)) v=d.s; if(v>d.s) v=d.s;
+        sel.get(id).imp=v; armar(); try{await SEL.poner([{id,imp:v}])}catch(e){aviso("No se guardó el importe: "+e.message)}};
+      tr.querySelector(".quitar").onclick=async()=>{sel.delete(id); armar(); try{await SEL.quitar([id])}catch(e){}}});
+    // Texto y HTML del correo
+    const L=["Instrucciones de pago a proveedores — "+fechaLarga(f),"",
+      "Total a pagar: $"+MX.format(tot)+" ("+ds.length+(ds.length===1?" factura":" facturas")+" de "+grupos.length+(grupos.length===1?" proveedor":" proveedores")+")",""];
+    grupos.forEach(([p,l],i)=>{L.push((i+1)+". "+D.provs[p][0]+" — $"+MX.format(l.reduce((a,d)=>a+imp(d),0)));
+      for(const d of l) L.push("   • Folio "+d.f+(d.fp?" (factura "+d.fp+")":"")+" · vence "+fD(d.v)+" · $"+MX.format(imp(d))+(imp(d)<d.s-0.005?" (abono parcial; saldo $"+MX.format(d.s)+")":""));
+      L.push("")});
+    if(nota) L.push(nota,"");
+    L.push("Saldos de cuentas por pagar de Microsip al cierre del "+fD(D.corte)+".");
+    txt=L.join("\n"); $("xrtexto").value=txt;
+    const td='style="padding:4px 10px;border-bottom:1px solid #ddd"', tdn='style="padding:4px 10px;border-bottom:1px solid #ddd;text-align:right;font-family:Consolas,monospace"';
+    html='<div style="font-family:Arial,sans-serif;font-size:14px"><p><b>Instrucciones de pago a proveedores — '+esc(fechaLarga(f))+'</b></p><p>Total a pagar: <b>$'+MX.format(tot)+"</b> ("+ds.length+" facturas de "+grupos.length+" proveedores)</p>"+
+      '<table style="border-collapse:collapse;font-size:13px"><tr style="background:#eef0f2"><th '+td+' align="left">Proveedor</th><th '+td+' align="left">Folio</th><th '+td+' align="left">Factura</th><th '+td+">Vence</th><th "+td+">Importe</th></tr>"+
+      grupos.map(([p,l])=>l.map((d,j)=>"<tr><td "+td+">"+(j?"":"<b>"+esc(D.provs[p][0])+"</b>")+"</td><td "+td+">"+esc(d.f)+"</td><td "+td+">"+esc(d.fp)+"</td><td "+td+">"+fD(d.v)+"</td><td "+tdn+">$"+MX.format(imp(d))+(imp(d)<d.s-0.005?" (parcial)":"")+"</td></tr>").join("")+
+        '<tr style="background:#f6f7f8"><td '+td+' colspan="4" align="right">Subtotal '+esc(D.provs[p][0])+"</td><td "+tdn+"><b>$"+MX.format(l.reduce((a,d)=>a+imp(d),0))+"</b></td></tr>").join("")+
+      '<tr style="background:#e3ecf5"><td '+td+' colspan="4" align="right"><b>Total</b></td><td '+tdn+"><b>$"+MX.format(tot)+"</b></td></tr></table>"+
+      (nota?"<p>"+esc(nota)+"</p>":"")+'<p style="color:#666;font-size:12px">Saldos de cuentas por pagar de Microsip al cierre del '+fD(D.corte)+".</p></div>";
+    $("xrcopiar").disabled=$("xrtxt").disabled=!ds.length;
+  };
+  $("xrfecha").onchange=armar; $("xrnota").oninput=armar;
+  const copiar=async conHtml=>{
+    try{
+      if(conHtml&&window.ClipboardItem) await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([html],{type:"text/html"}),"text/plain":new Blob([txt],{type:"text/plain"})})]);
+      else await navigator.clipboard.writeText(txt);
+      aviso(conHtml?"Copiado: pégalo en el correo (lleva tabla).":"Texto copiado.");
+    }catch(e){const t=$("xrtexto");t.removeAttribute("readonly");t.select();document.execCommand("copy");t.setAttribute("readonly","");aviso("Texto copiado.")}
+  };
+  $("xrcopiar").onclick=()=>copiar(true); $("xrtxt").onclick=()=>copiar(false);
+  armar();
+}
+function aviso(m){const a=$("aviso");a.textContent=m;a.hidden=false;clearTimeout(aviso.t);aviso.t=setTimeout(()=>a.hidden=true,3500)}
+
+// Versión con archivos (sin usuario): la pestaña aparece solo si hay cxp.json
+if(!window.FUENTE) fetch("cxp.json",{method:"HEAD"}).then(r=>{if(r.ok) $("tabX").hidden=false}).catch(()=>{});
 })();
 </script>

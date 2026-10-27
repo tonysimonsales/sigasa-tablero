@@ -53,12 +53,14 @@ async function arrancar(){
   if(window.PANEL.devolucionesIniciar) window.PANEL.devolucionesIniciar((fn,args)=>sb.rpc(fn,args),data.rol);
   if(data.rol==="chofer"){for(const t of ["tabR","tabV","tabC","tabA"]) $(t).hidden=true; window.PANEL.inicio="tabD"; window.PANEL.mostrar("tabD")}
   if(data.ve_uso){$("tabU").hidden=false; window.PANEL.uso=()=>usoProm||(usoProm=reporteUso())}
+  // Cuentas por pagar: solo perfiles con ve_cxp (Tony y ASG)
+  if(data.ve_cxp) $("tabX").hidden=false;
 }
 
 /* ---------- Descarga y descompresión de paquetes ---------- */
-const PREF={ventas:"v",cobranza:"c",visitas:"r",almacen:"a"};
+const PREF={ventas:"v",cobranza:"c",visitas:"r",almacen:"a",cxp:"p"};
 async function bajar(tipo){
-  const p=await perfil, todos=p.rol==="admin"||p.rol==="supervisor"||tipo==="almacen", t=PREF[tipo]+":todos";
+  const p=await perfil, todos=p.rol==="admin"||p.rol==="supervisor"||tipo==="almacen"||tipo==="cxp", t=PREF[tipo]+":todos";
   if((p.rol==="almacen"&&tipo!=="almacen")||p.rol==="chofer") return new Promise(()=>{}); // almacén y choferes no cargan ventas/cobranza/visitas
   let q=sb.from("paquetes").select("clave,contenido").eq("tipo",tipo);
   q=todos?q.eq("clave",t):q.neq("clave",t);
@@ -233,7 +235,18 @@ function detalleUso(u){
   $("ucerrar").onclick=c; velo.onclick=e=>{if(e.target===velo)c()};
 }
 
+/* ---------- CxP: selección de facturas a pagar, compartida entre los usuarios con ve_cxp ---------- */
+window.PANEL=window.PANEL||{};
+window.PANEL.cxpSel={
+  async listar(){await perfil; const {data,error}=await sb.from("cxp_seleccion").select("docto_cp_id,importe,nombre");
+    if(error) throw new Error(error.message); return data.map(r=>({id:r.docto_cp_id,imp:+r.importe,quien:r.nombre}))},
+  async poner(l){const p=await perfil; const {error}=await sb.from("cxp_seleccion").upsert(l.map(r=>({docto_cp_id:r.id,importe:r.imp,nombre:p.nombre})),{onConflict:"docto_cp_id"});
+    if(error) throw new Error(error.message)},
+  async quitar(ids){const {error}=await sb.from("cxp_seleccion").delete().in("docto_cp_id",ids); if(error) throw new Error(error.message)}
+};
+
 window.FUENTE={
+  cxp:async()=>{const b=await bajar("cxp"); if(!b.length) throw new Error("Todavía no hay cuentas por pagar cargadas."); return JSON.parse(new TextDecoder().decode(b[0]))},
   almacen:async()=>{const b=await bajar("almacen"); if(!b.length) throw new Error("Todavía no hay pedidos cargados para el almacén."); return JSON.parse(new TextDecoder().decode(b[0]))},
   visitas:async()=>unirVisitas((await bajar("visitas")).map(b=>JSON.parse(new TextDecoder().decode(b)))),
   ventas:async()=>unirVentas((await bajar("ventas")).map(leerVentas)),
