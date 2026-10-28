@@ -616,7 +616,7 @@ async function cargar(){
 function iniciar(){
   const M=C.meses, ult=M.length-1, primero=Math.max(0,ult-23);
   const [y,m,d]=C.generado_hasta.split("-");
-  $("corte").innerHTML="Datos al <b>"+(+d)+" "+MESN[+m-1]+" "+y+"</b> · cierre del día anterior";
+  window.CORTE_HTML="Datos al <b>"+(+d)+" "+MESN[+m-1]+" "+y+"</b> · cierre del día anterior"; if(window.ponerCorte) window.ponerCorte(); else $("corte").innerHTML=window.CORTE_HTML;
   for(const id of ["desde","hasta"]){
     const s=$(id); s.innerHTML="";
     for(let i=ult;i>=primero;i--){const op=document.createElement("option");op.value=i;op.textContent=mesTxt(M[i]);s.appendChild(op)}
@@ -894,8 +894,18 @@ function mostrar(id){
   if(id==="tabA"&&window.PANEL.almacen) window.PANEL.almacen();
   if(id==="tabX"&&window.PANEL.cxp) window.PANEL.cxp();
   if(id==="tabD"&&window.PANEL.devoluciones) window.PANEL.devoluciones();
+  ponerCorte();
   window.scrollTo({top:0});
 }
+// Encabezado: en Almacén la hora de la última actualización (cada hora); en las demás, el cierre del día anterior
+function ponerCorte(){
+  const act=window.ALM_ACT, enA=$("tabA").getAttribute("aria-selected")==="true";
+  if(enA&&act){const hoy=(d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"))(new Date());
+    const [y,m,d]=act.slice(0,10).split("-");
+    $("corte").innerHTML="Almacén: datos de Microsip "+(act.slice(0,10)===hoy?"de <b>hoy":"del <b>"+(+d)+" "+MESN[+m-1]+" "+y)+" a las "+act.slice(11,16)+"</b>";}
+  else if(window.CORTE_HTML) $("corte").innerHTML=window.CORTE_HTML;
+}
+window.ponerCorte=ponerCorte;
 window.PANEL=window.PANEL||{}; window.PANEL.mostrar=mostrar;
 window.PANEL.cobranzaCliente=async id=>{await asegurar(); if(!C) return false;
   const i=C.clientes.findIndex(f=>f.id===id); if(i<0) return false;
@@ -1325,6 +1335,7 @@ function pintar(){
     ["Importe por surtir",dinero(pend.reduce((a,p)=>a+p.ip,0)),"sin IVA"],
     ["Partidas sin existencia",fmt.format(sinEx),"lo pendiente es mayor que la existencia del almacén"],
     ["Surtidos completos",fmt.format(n("S")),(n("E")+n("C"))+" cerrados o cancelados"]];
+  window.ALM_ACT=D.actualizado||null; if(window.ponerCorte) window.ponerCorte();
   $("aact").textContent=D.actualizado?"Actualizado "+(D.actualizado.slice(0,10)===(d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"))(new Date())?"hoy":"el "+fC(D.actualizado.slice(0,10)))+" a las "+D.actualizado.slice(11,16)+" · se actualiza cada hora de 7:50 a 17:50":"Datos al cierre del "+fC(D.corte)+" · durante el día se actualiza cada hora";
   $("aresumen").innerHTML=tiles.map(([k,m,r])=>'<div class="cifra"><div class="k">'+k+'</div><div class="m">'+m+'</div><div class="ref">'+r+"</div></div>").join("");
   // Resumen por vía (solo con "todas las vías")
