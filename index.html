@@ -464,6 +464,7 @@ input.busq{flex:1 1 220px;min-width:0}
       <div class="fila"><div class="seg" role="group" aria-label="Situación" id="asit"></div>
         <input type="search" id="abus" placeholder="Buscar folio, cliente o artículo" aria-label="Buscar pedido" class="busq"></div>
     </section>
+    <p class="aviso" id="aact" style="margin:-6px 2px 0"></p>
     <section class="cresumen" id="aresumen" aria-live="polite"><div class="cargando">Cargando pedidos…</div></section>
     <section class="panel desg" id="aviaspanel">
       <div class="ghead"><h2>Por vía de embarque</h2></div>
@@ -1267,6 +1268,8 @@ const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",
 const dinero=v=>(v<0?"−$":"$")+fmt.format(Math.abs(Math.round(v)));
 const fC=s=>{const[y,m,d]=s.split("-");return +d+" "+MESN[+m-1]};
 const SIT={N:"Sin surtir",R:"Parcial",S:"Surtido",E:"Cerrado",C:"Cancelado"};
+// Durante el día Sigasa2 actualiza cada hora con la base en uso (D.actualizado); de noche viene del extracto (cierre del día anterior)
+const alCorte=()=>D.actualizado?"datos de Microsip al "+fC(D.actualizado.slice(0,10))+" a las "+D.actualizado.slice(11,16):"datos al cierre del "+fC(D.corte);
 const FILT=[["X","Por surtir",["N","R"]],["N","Sin surtir",["N"]],["R","Parciales",["R"]],["S","Surtidos",["S"]],["EC","Cerrados y cancelados",["E","C"]],["T","Todos",["N","R","S","E","C"]]];
 let D=null, prom=null;
 const st={via:new Set(),des:"",has:"",sit:"X",bus:"",lim:60,ord:{col:"d",dir:1}};
@@ -1322,6 +1325,7 @@ function pintar(){
     ["Importe por surtir",dinero(pend.reduce((a,p)=>a+p.ip,0)),"sin IVA"],
     ["Partidas sin existencia",fmt.format(sinEx),"lo pendiente es mayor que la existencia del almacén"],
     ["Surtidos completos",fmt.format(n("S")),(n("E")+n("C"))+" cerrados o cancelados"]];
+  $("aact").textContent=D.actualizado?"Actualizado "+(D.actualizado.slice(0,10)===(d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"))(new Date())?"hoy":"el "+fC(D.actualizado.slice(0,10)))+" a las "+D.actualizado.slice(11,16)+" · se actualiza cada hora de 7:50 a 17:50":"Datos al cierre del "+fC(D.corte)+" · durante el día se actualiza cada hora";
   $("aresumen").innerHTML=tiles.map(([k,m,r])=>'<div class="cifra"><div class="k">'+k+'</div><div class="m">'+m+'</div><div class="ref">'+r+"</div></div>").join("");
   // Resumen por vía (solo con "todas las vías")
   $("aviaspanel").hidden=st.via.size===1;
@@ -1355,7 +1359,7 @@ function pintarLista(){
     '<tr><td colspan="6" style="text-align:center;color:var(--ink-3);position:static">Sin pedidos con estos filtros</td></tr>';
   tb.tBodies[0].querySelectorAll("tr[data-f]").forEach(tr=>tr.onclick=()=>ficha(D.pedidos.find(p=>p.f===tr.dataset.f)));
   $("avermas").hidden=L.length<=st.lim;
-  $("anota").textContent="Pedidos del "+fC(D.desde)+" al "+fC(D.corte)+" (últimos "+D.dias+" días, datos al cierre del "+fC(D.corte)+"). Toca el título de una columna para ordenar; otra vez para invertir. Surtido = facturado o remisionado. Toca un pedido para ver sus artículos.";
+  $("anota").textContent="Pedidos del "+fC(D.desde)+" al "+fC(D.corte)+" (últimos "+D.dias+" días, "+alCorte()+"). Toca el título de una columna para ordenar; otra vez para invertir. Surtido = facturado o remisionado. Toca un pedido para ver sus artículos.";
 }
 /* Selector de vías: varias a la vez, en orden alfabético (como los filtros de Ventas) */
 function selectorVias(){
@@ -1385,7 +1389,7 @@ function ficha(p){
     '<div><table class="pt"><thead><tr><th>Artículo</th><th>Faltan</th><th>Existencia</th></tr></thead><tbody>'+
     p.p.map(x=>'<tr class="'+(x[4]>0?"":"ok")+'"><td><span class="cl">'+esc(x[0])+"</span> "+esc(x[1])+'<span class="sub">pedidas '+fu.format(x[2])+" · surtidas "+fu.format(x[3])+" "+esc((x[6]||"").toLowerCase())+'</span></td><td class="n'+(x[4]>0?" falta":"")+'">'+(x[4]>0?fu.format(x[4]):"—")+
       '</td><td class="n'+(x[4]>0&&x[5]<x[4]?" falta":"")+'">'+fu.format(x[5])+"</td></tr>").join("")+"</tbody></table></div>"+
-    '<p class="aviso">Existencia actual del artículo en el almacén del pedido, al cierre del '+fC(D.corte)+'. En rojo: no alcanza para lo que falta.</p></div></div>';
+    '<p class="aviso">Existencia del artículo en el almacén del pedido, '+alCorte()+'. En rojo: no alcanza para lo que falta.</p></div></div>';
   velo.hidden=false; const c=()=>{velo.hidden=true;velo.innerHTML=""};
   $("acerrar").onclick=c; velo.onclick=e=>{if(e.target===velo)c()};
 }
