@@ -1909,7 +1909,7 @@ function resumen(){
     txt=L.join("\n"); $("xrtexto").value=txt;
     const td='style="padding:4px 10px;border-bottom:1px solid #ddd"', tdn='style="padding:4px 10px;border-bottom:1px solid #ddd;text-align:right;font-family:Consolas,monospace"';
     html='<div style="font-family:Arial,sans-serif;font-size:14px"><p><b>Instrucciones de pago a proveedores — '+esc(fechaLarga(f))+'</b></p><p>Total a pagar: <b>$'+MX.format(tot)+"</b> ("+ds.length+" facturas de "+grupos.length+" proveedores)</p>"+
-      '<table style="border-collapse:collapse;font-size:13px"><tr style="background:#eef0f2"><th '+td+' align="left">Proveedor</th><th '+td+' align="left">Folio</th><th '+td+' align="left">Factura</th><th "+td+">Importe</th></tr>"+
+      '<table style="border-collapse:collapse;font-size:13px"><tr style="background:#eef0f2"><th '+td+' align="left">Proveedor</th><th '+td+' align="left">Folio</th><th '+td+' align="left">Factura</th><th '+td+">Importe</th></tr>"+
       grupos.map(([p,l])=>l.map((d,j)=>"<tr><td "+td+">"+(j?"":"<b>"+esc(D.provs[p][0])+"</b>")+"</td><td "+td+">"+esc(d.f)+"</td><td "+td+">"+esc(d.fp)+"</td><td "+tdn+">$"+MX.format(imp(d))+(imp(d)<d.s-0.005?" (parcial)":"")+"</td></tr>").join("")+
         '<tr style="background:#f6f7f8"><td '+td+' colspan="3" align="right">Subtotal '+esc(D.provs[p][0])+"</td><td "+tdn+"><b>$"+MX.format(l.reduce((a,d)=>a+imp(d),0))+"</b></td></tr>").join("")+
       '<tr style="background:#e3ecf5"><td '+td+' colspan="3" align="right"><b>Total</b></td><td '+tdn+"><b>$"+MX.format(tot)+"</b></td></tr></table>"+
