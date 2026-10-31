@@ -47,11 +47,15 @@ async function arrancar(){
   // Pestaña Almacén: admin, supervisores y almacén; el usuario de almacén solo ve esa pestaña
   if(!["admin","supervisor","almacen"].includes(data.rol)){$("tabA").hidden=true; if($("tabA").getAttribute("aria-selected")==="true") window.PANEL.mostrar("tabR")}
   if(data.rol==="almacen"){for(const t of ["tabR","tabV","tabC"]) $(t).hidden=true; window.PANEL.inicio="tabA"; window.PANEL.mostrar("tabA")}
-  if(data.rol==="almacen"||data.rol==="chofer") $("corte").textContent=""; // no cargan ventas: sin "Cargando datos…"
+  if(data.rol==="almacen"||data.rol==="chofer"||data.rol==="cyc") $("corte").textContent=""; // no cargan ventas: sin "Cargando datos…"
   // Devoluciones: todos los roles; el chofer solo ve esa pestaña
   const {data:{user}}=await sb.auth.getUser(); window.PANEL.uid=user&&user.id;
   if(window.PANEL.devolucionesIniciar) window.PANEL.devolucionesIniciar((fn,args)=>sb.rpc(fn,args),data.rol);
   if(data.rol==="chofer"){for(const t of ["tabR","tabV","tabC","tabA"]) $(t).hidden=true; window.PANEL.inicio="tabD"; window.PANEL.mostrar("tabD")}
+  // Reparto: admin, supervisores, almacén y Crédito y Cobranza (cyc); cyc solo ve esa pestaña
+  if(data.rol==="cyc"){for(const t of ["tabR","tabV","tabC","tabA"]) $(t).hidden=true}
+  if(window.PANEL.repartoIniciar) window.PANEL.repartoIniciar((fn,args)=>sb.rpc(fn,args),data.rol).then(ok=>{
+    if(ok&&data.rol==="cyc"){window.PANEL.inicio="tabE"; window.PANEL.mostrar("tabE")}});
   if(data.ve_uso){$("tabU").hidden=false; window.PANEL.uso=()=>usoProm||(usoProm=reporteUso())}
   // Cuentas por pagar: solo perfiles con ve_cxp (Tony y ASG)
   if(data.ve_cxp) $("tabX").hidden=false;
@@ -61,7 +65,7 @@ async function arrancar(){
 const PREF={ventas:"v",cobranza:"c",visitas:"r",almacen:"a",cxp:"p"};
 async function bajar(tipo){
   const p=await perfil, todos=p.rol==="admin"||p.rol==="supervisor"||tipo==="almacen"||tipo==="cxp", t=PREF[tipo]+":todos";
-  if((p.rol==="almacen"&&tipo!=="almacen")||p.rol==="chofer") return new Promise(()=>{}); // almacén y choferes no cargan ventas/cobranza/visitas
+  if((p.rol==="almacen"&&tipo!=="almacen")||p.rol==="chofer"||p.rol==="cyc") return new Promise(()=>{}); // almacén y choferes no cargan ventas/cobranza/visitas
   let q=sb.from("paquetes").select("clave,contenido").eq("tipo",tipo);
   q=todos?q.eq("clave",t):q.neq("clave",t);
   const {data,error}=await q;

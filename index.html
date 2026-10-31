@@ -159,6 +159,43 @@ tfoot td:first-child{background:var(--surface-2)}
 .antres b{color:var(--ink);font-family:var(--f-num);font-weight:500}
 @media (max-width:720px){.cresumen{grid-template-columns:1fr 1fr}.ant .r{grid-template-columns:70px 1fr 112px}.ant .r .vl small{display:none}}
 @media (prefers-reduced-motion:no-preference){.barra b{transition:width .25s}}
+
+/* Reparto */
+.evistas{flex-wrap:wrap;align-self:start}
+#esub{flex-wrap:wrap;align-self:start}
+.rlista{display:grid;gap:8px}
+.rcard{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:var(--r);padding:10px 12px;display:grid;gap:6px;min-width:0}
+.rcard .top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline}
+.rcard.r-entregada{border-left-color:var(--good)} .rcard.r-parcial{border-left-color:var(--s2)} .rcard.r-no_entregada{border-left-color:var(--bad)}
+.rcard .fila{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rcard select{min-height:40px}
+.rtag{display:inline-block;font-size:.7rem;font-weight:600;border-radius:999px;padding:1px 7px;border:1px solid var(--ink-3);color:var(--ink-2);margin-left:4px;white-space:nowrap}
+.rtag.c{border-color:var(--s2);color:var(--s2)}
+.rres3{flex-wrap:wrap;align-self:start}
+.rres3 button[data-r="entregada"][aria-pressed="true"]{background:var(--good);color:#fff}
+.rres3 button[data-r="parcial"][aria-pressed="true"]{background:var(--s2);color:#fff}
+.rres3 button[data-r="no_entregada"][aria-pressed="true"]{background:var(--bad);color:#fff}
+.rchk{display:inline-flex;gap:8px;align-items:center;cursor:pointer;font-size:.88rem}
+.rchk input{width:20px;height:20px;accent-color:var(--accent)}
+.rres{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.9rem;margin-bottom:10px}
+.rres b{font-family:var(--f-num)}
+.rcierre{position:sticky;bottom:0;z-index:2;box-shadow:0 -4px 12px rgba(0,0,0,.08)}
+.rform{display:grid;gap:12px}
+.rtab{min-width:560px}
+.rtab td .sub{display:block;color:var(--ink-3);font-size:.75rem}
+.rtab .quitar,.rpr button{min-width:40px}
+.rpor{display:grid;gap:8px;border-top:1px solid var(--line-soft);padding-top:10px}
+.rpor select{max-width:100%}
+.rpr{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid var(--line-soft);border-radius:var(--r);padding:6px 10px;background:var(--surface-2)}
+.rgrupo{display:grid;gap:4px;margin-bottom:12px}
+.rgh{display:flex;justify-content:space-between;gap:8px;align-items:center;border-bottom:2px solid var(--line);padding:4px 0}
+.rev{display:grid;grid-template-columns:24px 1fr;gap:8px;align-items:start;padding:7px 6px;border-bottom:1px solid var(--line-soft);cursor:pointer;font-size:.9rem}
+.rev.on{background:var(--accent-soft)}
+.rev input{width:20px;height:20px;accent-color:var(--accent);margin-top:1px}
+.rev .sub{display:block;color:var(--ink-3);font-size:.78rem}
+.rbar{position:sticky;bottom:0;z-index:2;display:flex;flex-wrap:wrap;gap:8px;align-items:center;box-shadow:0 -4px 12px rgba(0,0,0,.08)}
+.rbar .busq{flex:1 1 200px}
+#pReparto .rojo{color:var(--bad)}
 /* Devoluciones */
 .badge{display:inline-block;min-width:20px;padding:0 6px;border-radius:999px;background:var(--bad);color:#fff;font-size:.72rem;font-family:var(--f-num);line-height:18px;text-align:center;vertical-align:2px}
 .dvistas{flex-wrap:wrap;align-self:start}
@@ -388,6 +425,7 @@ input.busq{flex:1 1 220px;min-width:0}
     <button type="button" role="tab" id="tabC" aria-selected="false" aria-controls="pCobranza">Cobranza</button>
     <button type="button" role="tab" id="tabA" aria-selected="false" aria-controls="pAlmacen">Almacén</button>
     <button type="button" role="tab" id="tabX" aria-selected="false" aria-controls="pCxp" hidden>CxP</button>
+    <button type="button" role="tab" id="tabE" aria-selected="false" aria-controls="pReparto" hidden>Reparto <span class="badge" id="ebadge" hidden></span></button>
     <button type="button" role="tab" id="tabD" aria-selected="false" aria-controls="pDevol" hidden>Devoluciones <span class="badge" id="dbadge" hidden></span></button>
     <button type="button" role="tab" id="tabU" aria-selected="false" aria-controls="pUso" hidden>Uso</button>
   </nav>
@@ -476,6 +514,10 @@ input.busq{flex:1 1 220px;min-width:0}
       <div class="mas"><button type="button" class="btn" id="avermas" hidden>Mostrar más</button></div>
       <p class="aviso" id="anota"></p>
     </section>
+  </div>
+  <div id="pReparto" class="pestana" role="tabpanel" aria-labelledby="tabE" hidden>
+    <div class="seg evistas" role="group" aria-label="Vista" id="evistas"></div>
+    <div id="ecuerpo" class="pestana"></div>
   </div>
   <div id="pDevol" class="pestana" role="tabpanel" aria-labelledby="tabD" hidden>
     <div class="seg dvistas" role="group" aria-label="Vista" id="dvistas">
@@ -883,7 +925,7 @@ const dec=(v,n)=>v==null||!isFinite(v)?"—":v.toFixed(n);
 const mesTxt=m=>{const[y,mm]=m.split("-");return MESN[+mm-1]+" "+y};
 
 /* Pestañas */
-const tabs=[["tabV","pVentas"],["tabC","pCobranza"],["tabR","pVisitas"],["tabA","pAlmacen"],["tabX","pCxp"],["tabD","pDevol"],["tabU","pUso"]];
+const tabs=[["tabV","pVentas"],["tabC","pCobranza"],["tabR","pVisitas"],["tabA","pAlmacen"],["tabX","pCxp"],["tabE","pReparto"],["tabD","pDevol"],["tabU","pUso"]];
 let prom=null; const asegurar=()=>prom||(prom=cargar());
 function mostrar(id){
   for(const [t,p] of tabs){const on=t===id;$(t).setAttribute("aria-selected",on);$(p).hidden=!on}
@@ -894,6 +936,7 @@ function mostrar(id){
   if(id==="tabA"&&window.PANEL.almacen) window.PANEL.almacen();
   if(id==="tabX"&&window.PANEL.cxp) window.PANEL.cxp();
   if(id==="tabD"&&window.PANEL.devoluciones) window.PANEL.devoluciones();
+  if(id==="tabE"&&window.PANEL.reparto) window.PANEL.reparto();
   ponerCorte();
   window.scrollTo({top:0});
 }
@@ -1931,5 +1974,309 @@ function aviso(m){const a=$("aviso");a.textContent=m;a.hidden=false;clearTimeout
 
 // Versión con archivos (sin usuario): la pestaña aparece solo si hay cxp.json
 if(!window.FUENTE) fetch("cxp.json",{method:"HEAD"}).then(r=>{if(r.ok) $("tabX").hidden=false}).catch(()=>{});
+})();
+</script>
+<script>
+(function(){
+"use strict";
+/* Pestaña Reparto (solo en la página web con usuario): salidas de camionetas → recepción del chofer →
+   no entregados (reprogramar / cancelar) → evidencias (Crédito y Cobranza y archivo del almacén). */
+const MESN=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const $=s=>document.getElementById(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const MX=new Intl.NumberFormat("es-MX",{minimumFractionDigits:2,maximumFractionDigits:2});
+const din=v=>v==null?"—":"$"+MX.format(v);
+const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const HOY=()=>iso(new Date());
+const fD=s=>{if(!s)return"—";const d=new Date(s.length<=10?s+"T12:00:00":s);return d.getDate()+" "+MESN[d.getMonth()]};
+const fH=s=>{if(!s)return"";const d=new Date(s);return fD(s)+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
+const dias=s=>s?Math.max(0,Math.round((new Date(HOY()+"T12:00:00")-new Date((s.length<=10?s+"T12:00:00":s)))/864e5)):0;
+const pago=e=>e.contado===true?'<span class="rtag c">Contado</span>':e.contado===false?'<span class="rtag">Crédito</span>':"";
+const FORMAS=["Efectivo","Transferencia","Cheque","No pagó"];
+let rpc=null, rol="", C=null, SAL=[], ENT=[], PR=[], vista="salidas", sub="cyc", verHechas=false, recib=null, prom=null;
+const N={abierta:false,fecha:"",veh:"",cho:"",items:[],via:""};
+const borr=new Map(); // borradores de la recepción (no entregada sin motivo)
+const sel=new Set();
+const escribe=()=>rol==="admin"||rol==="almacen";
+
+async function llamar(fn,args){const {data,error}=await rpc(fn,args||{}); if(error) throw new Error(error.message); return data}
+function aviso(m){const a=$("aviso");a.textContent=m;a.hidden=false;clearTimeout(aviso.t);aviso.t=setTimeout(()=>a.hidden=true,3500)}
+
+window.PANEL=window.PANEL||{};
+// La pestaña aparece solo si Supabase ya tiene las funciones (supabase/15_reparto.sql) y el rol puede verla
+window.PANEL.repartoIniciar=(fRpc,r)=>{rpc=fRpc; rol=r;
+  if(!["admin","supervisor","almacen","cyc"].includes(r)) return Promise.resolve(false);
+  return llamar("rp_catalogos").then(c=>{C=c; $("tabE").hidden=false; if(rol==="cyc"){vista="evid";sub="cyc"} return cargar().then(()=>true)}).catch(()=>false)};
+window.PANEL.reparto=()=>prom||(prom=Promise.resolve().then(pintar));
+
+async function cargar(){
+  const desde=iso(new Date(Date.now()-45*864e5));
+  [SAL,ENT]=await Promise.all([llamar("rp_salidas_lista",{desde}),llamar("rp_entregas_lista",{desde})]);
+  const pend=rol==="cyc"?pendEv("cyc").length:SAL.filter(s=>s.estado==="en_ruta").length+sinDecision().length;
+  const b=$("ebadge"); b.textContent=pend; b.hidden=!pend;
+}
+const salida=id=>SAL.find(s=>s.id===id);
+const deSalida=id=>ENT.filter(e=>e.salida_id===id).sort((a,b)=>a.orden-b.orden);
+const enRuta=()=>SAL.filter(s=>s.estado==="en_ruta");
+// La última entrega de cada folio (para saber si una no entregada ya volvió a salir)
+function ultimas(){const m=new Map();
+  for(const e of ENT){const s=salida(e.salida_id); if(!s||s.estado==="cancelada") continue;
+    const k=e.folio, p=m.get(k); if(!p||salida(p.salida_id).creado<s.creado) m.set(k,e)} return m}
+const intentos=f=>ENT.filter(e=>e.folio===f&&salida(e.salida_id)&&salida(e.salida_id).estado!=="cancelada").length;
+function sinDecision(){const u=ultimas(); return ENT.filter(e=>e.resultado==="no_entregada"&&!e.decision&&u.get(e.folio)===e)}
+function reprogramadas(){const u=ultimas(); return ENT.filter(e=>e.resultado==="no_entregada"&&e.decision==="reprogramar"&&u.get(e.folio)===e)}
+function pendEv(t){return ENT.filter(e=>(e.resultado==="entregada"||e.resultado==="parcial")&&(t==="cyc"?!e.ev_cyc_fecha:!e.ev_arch_fecha))}
+function hechasEv(t){const lim=Date.now()-30*864e5;return ENT.filter(e=>(t==="cyc"?e.ev_cyc_fecha:e.ev_arch_fecha)&&new Date(t==="cyc"?e.ev_cyc_fecha:e.ev_arch_fecha).getTime()>=lim)}
+
+/* ---------- Pintado general ---------- */
+function pintar(){
+  const V=rol==="cyc"?[["evid","Evidencias"]]:[["salidas","Salidas"],["recibir","Recepción"],["noent","No entregados"],["evid","Evidencias"]];
+  const nR=enRuta().length, nN=sinDecision().length;
+  $("evistas").innerHTML=V.map(([k,t])=>'<button type="button" data-v="'+k+'" aria-pressed="'+(vista===k)+'">'+t+
+    (k==="recibir"&&nR?" ("+nR+")":k==="noent"&&nN?" ("+nN+")":"")+"</button>").join("");
+  $("evistas").hidden=V.length<2;
+  $("evistas").querySelectorAll("button").forEach(b=>b.onclick=()=>{vista=b.dataset.v;recib=null;sel.clear();pintar()});
+  const box=$("ecuerpo");
+  if(vista==="salidas") box.innerHTML=vSalidas(); else if(vista==="recibir") box.innerHTML=vRecibir();
+  else if(vista==="noent") box.innerHTML=vNoEnt(); else box.innerHTML=vEvid();
+  enlazar();
+}
+async function refrescar(){try{await cargar()}catch(e){aviso(e.message)} pintar()}
+
+/* ---------- Salidas ---------- */
+function vSalidas(){
+  let h="";
+  if(escribe()){
+    if(!N.abierta) h+='<div class="acc"><button type="button" class="prim" data-a="nueva">Nueva salida</button></div>';
+    else h+=formSalida();
+  }
+  const er=enRuta();
+  h+='<section class="panel"><div class="ghead"><h2>En ruta</h2></div>'+(er.length?'<div class="rlista">'+er.map(tarjSalida).join("")+"</div>":'<div class="vacio">No hay camionetas en ruta.</div>')+"</section>";
+  const rec=SAL.filter(s=>s.estado==="recibida"&&dias(s.fecha)<=7);
+  if(rec.length) h+='<section class="panel"><div class="ghead"><h2>Recibidas (últimos 7 días)</h2></div><div class="rlista">'+rec.map(tarjSalida).join("")+"</div></section>";
+  return h;
+}
+function resumenSalida(es){
+  const ent=es.filter(e=>e.resultado==="entregada").length, par=es.filter(e=>e.resultado==="parcial").length, no=es.filter(e=>e.resultado==="no_entregada").length;
+  const cob=es.filter(e=>e.contado&&e.resultado!=="no_entregada").reduce((a,e)=>a+(+e.total||0),0);
+  return {ent,par,no,cob,sinEv:es.filter(e=>e.resultado&&e.resultado!=="no_entregada"&&e.trae_evidencia===false).length};
+}
+function tarjSalida(s){
+  const es=deSalida(s.id), r=resumenSalida(es), cont=es.filter(e=>e.contado).reduce((a,e)=>a+(+e.total||0),0);
+  const lin=s.estado==="recibida"?r.ent+" entregadas"+(r.par?" · "+r.par+" parciales":"")+(r.no?' · <b class="rojo">'+r.no+" no entregadas</b>":"")+" · recibió "+esc(s.recibida_por)+" "+fH(s.recibida_fecha)
+    :es.length+" facturas"+(cont?" · contado por cobrar "+din(cont):"")+" · registró "+esc(s.creado_por||"")+" "+fH(s.creado);
+  return '<div class="rcard"><div class="top"><b>'+esc(s.vehiculo)+" · "+esc(s.chofer)+'</b><span class="sub2">'+fD(s.fecha)+"</span></div>"+
+    '<div class="sub2">'+lin+"</div>"+
+    '<div class="acc"><button type="button" class="btn" data-a="hoja" data-s="'+s.id+'">Hoja de carga</button>'+
+    (s.estado==="en_ruta"&&escribe()?'<button type="button" class="prim" data-a="recibir" data-s="'+s.id+'">Recibir chofer</button>'+
+      (es.every(e=>!e.resultado)?'<button type="button" class="link" data-a="cansal" data-s="'+s.id+'">Cancelar salida</button>':""):"")+"</div></div>";
+}
+function formSalida(){
+  const opt=(l,v,ph)=>'<option value="">'+ph+"</option>"+l.map(x=>'<option'+(x===v?" selected":"")+">"+esc(x)+"</option>").join("");
+  const tot=N.items.reduce((a,i)=>a+(+i.total||0),0), cont=N.items.filter(i=>i.contado).reduce((a,i)=>a+(+i.total||0),0);
+  const ya=new Set(N.items.map(i=>i.folio));
+  const vias=[...new Set(PR.map(p=>p.via||"Sin vía"))].sort();
+  const pr=PR.filter(p=>!ya.has(p.folio)&&(!N.via||(p.via||"Sin vía")===N.via));
+  return '<section class="panel rform"><div class="ghead"><h2>Nueva salida</h2><button type="button" class="link" data-a="cerrarnueva">Cerrar</button></div>'+
+    '<div class="fila"><div class="campo"><label class="etq" for="nfecha">Fecha</label><input type="date" id="nfecha" class="fecha" value="'+(N.fecha||HOY())+'"></div>'+
+    '<div class="campo"><label class="etq" for="nveh">Vehículo</label><select id="nveh">'+opt(C.vehiculos,N.veh,"Elige…")+"</select></div>"+
+    '<div class="campo" style="flex:1 1 200px"><label class="etq" for="ncho">Chofer</label><select id="ncho" style="width:100%">'+opt(C.choferes,N.cho,"Elige…")+"</select></div></div>"+
+    '<div class="campo"><label class="etq" for="nfol">Agregar factura (folio)</label><div class="fila"><input type="search" id="nfol" class="busq" placeholder="Ej. 184169 o L00184169" autocomplete="off" inputmode="text"><button type="button" class="btn" data-a="agregar">Agregar</button></div></div>'+
+    (N.items.length?'<div class="rlista">'+N.items.map((i,k)=>'<div class="rpr"><div><b>'+(k+1)+". "+esc(i.folio)+"</b> · "+(i.cliente?esc(i.cliente)+" "+pago(i)+'<div class="sub2">'+esc(i.via||"")+" · "+din(i.total)+"</div>":'<span class="rojo">aún no está en los datos; se completa en la siguiente carga</span>')+
+      '</div><button type="button" class="btn" data-a="qitem" data-k="'+k+'" aria-label="Quitar">✕</button></div>').join("")+"</div>"+
+      '<div class="rres"><span><b>'+N.items.length+"</b> facturas</span><span>Total <b>"+din(tot)+"</b></span>"+(cont?"<span>Contado por cobrar <b>"+din(cont)+"</b></span>":"")+"</div>":'<div class="vacio">Escribe o escanea los folios, o agrégalos de la lista de abajo.</div>')+
+    '<div class="acc"><button type="button" class="prim" data-a="guardarsal"'+(N.items.length?"":" disabled")+'>Registrar salida ('+N.items.length+')</button></div>'+
+    '<div class="rpor"><div class="ghead"><h2>Por repartir</h2><select id="nvia" aria-label="Vía de embarque"><option value="">Todas las vías ('+PR.filter(p=>!ya.has(p.folio)).length+')</option>'+
+      vias.map(v=>'<option'+(v===N.via?" selected":"")+">"+esc(v)+"</option>").join("")+"</select></div>"+
+    '<div class="sub2">Facturas de las vías de reparto de los últimos 10 días (desde que empezamos a usar esta pestaña) que no han salido, y las no entregadas que se reprogramaron.</div>'+
+    (N.via&&pr.length?'<div class="acc"><button type="button" class="btn" data-a="todasvia">Agregar las '+pr.length+" de esta vía</button></div>":"")+
+    '<div class="rlista">'+(pr.slice(0,150).map((p,k)=>'<div class="rpr"><div><b>'+esc(p.folio)+"</b> · "+esc(p.cliente||"")+" "+pago(p)+
+      '<div class="sub2">'+esc(p.via||"")+" · "+fD(p.fecha)+" · "+din(p.total)+(p.intentos?' · <span class="rojo">'+p.intentos+(p.intentos>1?" intentos":" intento")+(p.ultimo_motivo?" ("+esc(p.ultimo_motivo)+")":"")+"</span>":"")+(p.fecha_reprog?" · reprogramada al "+fD(p.fecha_reprog):"")+"</div></div>"+
+      '<button type="button" class="btn" data-a="addpr" data-f="'+esc(p.folio)+'" aria-label="Agregar">+</button></div>').join("")||'<div class="vacio">Nada por repartir.</div>')+"</div></div></section>";
+}
+async function agregarFolio(q){
+  q=(q||"").trim(); if(!q) return;
+  try{
+    const r=await llamar("rp_buscar",{q}), f=r[0];
+    const folio=f?f.folio:q.toUpperCase();
+    if(N.items.some(i=>i.folio===folio)){aviso("Ya está en la lista");return}
+    const ruta=ENT.find(e=>e.folio===folio&&!e.resultado&&salida(e.salida_id)&&salida(e.salida_id).estado==="en_ruta");
+    if(ruta){const s=salida(ruta.salida_id);aviso("Ya va en "+s.vehiculo+" con "+s.chofer);return}
+    if(f&&f.estatus==="C"){aviso("La factura "+f.folio+" está cancelada");return}
+    N.items.push(f?{folio:f.folio,cliente:f.cliente,via:f.via,contado:f.contado,total:f.total}:{folio,cliente:null,total:null,contado:null});
+    if(!f) aviso("El folio "+folio+" aún no está en los datos; se agrega así y se completa después");
+  }catch(e){aviso(e.message)}
+  guardarForm(); pintar(); const i=$("nfol"); if(i){i.value="";i.focus()}
+}
+function guardarForm(){if($("nfecha")){N.fecha=$("nfecha").value;N.veh=$("nveh").value;N.cho=$("ncho").value}}
+
+/* ---------- Hoja de carga (imprimible) ---------- */
+function hoja(s){
+  const es=deSalida(s.id), cont=es.filter(e=>e.contado).reduce((a,e)=>a+(+e.total||0),0);
+  const w=window.open("","_blank"); if(!w){aviso("Permite las ventanas emergentes para imprimir");return}
+  w.document.write('<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Hoja de carga '+esc(s.vehiculo)+" "+fD(s.fecha)+'</title><style>'+
+    'body{font:13px Arial,sans-serif;margin:24px;color:#000}h1{font-size:18px;margin:0 0 4px}table{border-collapse:collapse;width:100%;margin-top:12px}'+
+    'th,td{border:1px solid #999;padding:5px 6px;text-align:left;vertical-align:top}th{background:#eee}td.n{text-align:right;white-space:nowrap}.f{display:flex;gap:40px;margin-top:48px}.f div{flex:1;border-top:1px solid #000;padding-top:4px;text-align:center}'+
+    '@media print{body{margin:10mm}}</style></head><body><h1>SIGASA · Hoja de carga</h1><div>Vehículo <b>'+esc(s.vehiculo)+"</b> · Chofer <b>"+esc(s.chofer)+"</b> · Fecha <b>"+fD(s.fecha)+"</b> · "+es.length+" facturas"+(cont?" · Contado por cobrar <b>"+din(cont)+"</b>":"")+"</div>"+
+    "<table><tr><th>#</th><th>Folio</th><th>Cliente</th><th>Vía / zona</th><th>Pago</th><th>Total</th><th>Bultos</th><th>Entregada</th></tr>"+
+    es.map((e,i)=>"<tr><td>"+(i+1)+"</td><td>"+esc(e.folio)+"</td><td>"+esc(e.cliente||"")+"</td><td>"+esc(e.via||"")+"</td><td>"+(e.contado===true?"CONTADO":e.contado===false?"Crédito":"")+'</td><td class="n">'+din(e.total)+"</td><td></td><td></td></tr>").join("")+
+    '</table><div class="f"><div>Entregó almacén</div><div>Recibió chofer</div></div><script>window.onload=()=>window.print()<\/script></body></html>');
+  w.document.close();
+}
+
+/* ---------- Recepción del chofer ---------- */
+function vRecibir(){
+  const er=enRuta();
+  if(!recib||!salida(recib)||salida(recib).estado!=="en_ruta"){
+    recib=null;
+    return '<section class="panel"><div class="ghead"><h2>Camionetas en ruta</h2></div>'+(er.length?'<div class="rlista">'+er.map(tarjSalida).join("")+"</div>":'<div class="vacio">No hay camionetas en ruta.</div>')+"</section>";
+  }
+  const s=salida(recib), es=deSalida(s.id), r=resumenSalida(es), falt=es.filter(e=>!e.resultado).length;
+  return '<section class="panel"><div class="ghead"><h2>Recibir: '+esc(s.vehiculo)+" · "+esc(s.chofer)+'</h2><button type="button" class="link" data-a="volver">Volver</button></div>'+
+    '<div class="sub2">Salió el '+fD(s.fecha)+" con "+es.length+" facturas. Marca cada una; se guarda al momento.</div></section>"+
+    '<div class="rlista">'+es.map(filaRecibir).join("")+"</div>"+
+    '<section class="panel rcierre"><div class="rres"><span><b>'+r.ent+"</b> entregadas</span><span><b>"+r.par+"</b> parciales</span><span><b>"+r.no+'</b> no entregadas</span><span><b>'+falt+"</b> por marcar</span>"+
+    "<span>Efectivo y pagos de contado: <b>"+din(es.filter(e=>e.contado&&e.resultado&&e.resultado!=="no_entregada"&&e.forma_pago!=="No pagó").reduce((a,e)=>a+(+e.total||0),0))+"</b></span>"+
+    (r.sinEv?'<span class="rojo"><b>'+r.sinEv+"</b> sin evidencia firmada</span>":"")+"</div>"+
+    '<div class="fila"><input type="text" id="rcoment" class="busq" placeholder="Comentario de la recepción (opcional)"><button type="button" class="prim" data-a="cerrarrec" data-s="'+s.id+'"'+(falt?" disabled":"")+">Cerrar recepción</button></div></section>";
+}
+function filaRecibir(e){
+  const b=borr.get(e.id)||{}, res=b.resultado||e.resultado||"", mot=b.motivo!=null?b.motivo:(e.motivo||"");
+  const btn=(v,t)=>'<button type="button" data-a="res" data-e="'+e.id+'" data-r="'+v+'" aria-pressed="'+(res===v)+'">'+t+"</button>";
+  let det="";
+  if(res==="no_entregada") det='<div class="fila"><select data-a="mot" data-e="'+e.id+'" aria-label="Motivo"><option value="">Motivo…</option>'+C.motivos.map(m=>"<option"+(m===mot?" selected":"")+">"+esc(m)+"</option>").join("")+"</select>"+
+    '<input type="text" class="busq" data-a="com" data-e="'+e.id+'" placeholder="Comentario" value="'+esc(b.comentario!=null?b.comentario:(e.comentario||""))+'"></div>'+(!e.resultado||e.resultado!=="no_entregada"||!e.motivo?'<div class="rojo sub2">Elige el motivo para guardar</div>':"");
+  else if(res){
+    det='<div class="fila">'+(e.contado!==false?'<select data-a="fp" data-e="'+e.id+'" aria-label="Forma de pago"><option value="">'+(e.contado?"Forma de pago…":"Pago (si fue de contado)…")+"</option>"+FORMAS.map(f=>"<option"+(f===e.forma_pago?" selected":"")+">"+f+"</option>").join("")+"</select>":"")+
+      '<label class="rchk"><input type="checkbox" data-a="ev" data-e="'+e.id+'"'+(e.trae_evidencia!==false?" checked":"")+"> Trae evidencia firmada</label>"+
+      '<input type="text" class="busq" data-a="com" data-e="'+e.id+'" placeholder="Comentario" value="'+esc(e.comentario||"")+'"></div>'+
+      (res==="parcial"?'<div class="sub2">Lo que regresó se registra en la pestaña Devoluciones.</div>':"");
+  }
+  return '<div class="rcard'+(res?" r-"+res:"")+'"><div class="top"><b>'+esc(e.folio)+" · "+esc(e.cliente||"(aún no está en los datos)")+"</b>"+pago(e)+'</div><div class="sub2">'+din(e.total)+(e.via?" · "+esc(e.via):"")+(intentos(e.folio)>1?' · <span class="rojo">intento '+intentos(e.folio)+"</span>":"")+"</div>"+
+    '<div class="seg rres3">'+btn("entregada","Entregada")+btn("parcial","Parcial")+btn("no_entregada","No entregada")+"</div>"+det+"</div>";
+}
+async function guardarRec(id){
+  const e=ENT.find(x=>x.id===id), b=borr.get(id)||{};
+  const d={resultado:b.resultado||e.resultado, motivo:b.motivo!=null?b.motivo:e.motivo, comentario:b.comentario!=null?b.comentario:e.comentario,
+           forma_pago:b.forma_pago!=null?b.forma_pago:e.forma_pago, trae_evidencia:b.trae!=null?b.trae:(e.trae_evidencia!==false)};
+  if(!d.resultado) return;
+  if(d.resultado==="no_entregada"&&!d.motivo){borr.set(id,b);pintar();return}
+  try{await llamar("rp_registrar",{ent:id,d}); borr.delete(id);
+    Object.assign(e,{resultado:d.resultado,motivo:d.resultado==="no_entregada"?d.motivo:null,comentario:d.comentario||null,forma_pago:d.forma_pago||null,
+      trae_evidencia:d.resultado==="no_entregada"?null:d.trae_evidencia});
+  }catch(err){aviso(err.message)}
+  pintar();
+}
+
+/* ---------- No entregados ---------- */
+function vNoEnt(){
+  const sd=sinDecision(), rp=reprogramadas(), can=ENT.filter(e=>e.resultado==="no_entregada"&&e.decision==="cancelar"&&dias(e.decision_fecha)<=30);
+  const card=(e,acc)=>{const s=salida(e.salida_id);
+    return '<div class="rcard r-no_entregada"><div class="top"><b>'+esc(e.folio)+" · "+esc(e.cliente||"")+"</b>"+pago(e)+"</div>"+
+      '<div class="sub2"><b>'+esc(e.motivo||"")+"</b>"+(e.comentario?" · “"+esc(e.comentario)+"”":"")+"</div>"+
+      '<div class="sub2">'+din(e.total)+" · salió el "+fD(s.fecha)+" en "+esc(s.vehiculo)+" con "+esc(s.chofer)+" · "+intentos(e.folio)+(intentos(e.folio)>1?" intentos":" intento")+" · hace "+dias(s.fecha)+" días</div>"+acc(e)+"</div>"};
+  const accSD=e=>escribe()?'<div class="fila"><input type="date" class="fecha" id="rf_'+e.id+'" value="'+iso(new Date(Date.now()+864e5))+'" aria-label="Fecha para volver a salir">'+
+      '<button type="button" class="prim" data-a="reprog" data-e="'+e.id+'">Reprogramar</button><button type="button" class="btn" data-a="cancelar" data-e="'+e.id+'">Cancelar entrega</button></div>':"";
+  const accRP=e=>'<div class="sub2">Reprogramada al <b>'+fD(e.fecha_reprog)+"</b> por "+esc(e.decision_por)+(e.decision_comentario?" · “"+esc(e.decision_comentario)+"”":"")+
+      ' · aparece en "Por repartir" al registrar una salida.'+(escribe()?' <button type="button" class="link" data-a="cancelar" data-e="'+e.id+'">Cancelar entrega</button>':"")+"</div>";
+  return '<section class="panel"><div class="ghead"><h2>Sin decisión ('+sd.length+")</h2></div>"+(sd.length?'<div class="rlista">'+sd.sort((a,b)=>salida(a.salida_id).fecha.localeCompare(salida(b.salida_id).fecha)).map(e=>card(e,accSD)).join("")+"</div>":'<div class="vacio">Todas las no entregadas tienen decisión.</div>')+"</section>"+
+    '<section class="panel"><div class="ghead"><h2>Reprogramadas, esperando salir ('+rp.length+")</h2></div>"+(rp.length?'<div class="rlista">'+rp.map(e=>card(e,accRP)).join("")+"</div>":'<div class="vacio">Ninguna.</div>')+"</section>"+
+    (can.length?'<section class="panel"><div class="ghead"><h2>Canceladas (30 días)</h2></div><div class="rlista">'+can.map(e=>card(e,e=>'<div class="sub2">Canceló '+esc(e.decision_por)+" el "+fH(e.decision_fecha)+(e.decision_comentario?" · “"+esc(e.decision_comentario)+"”":"")+"</div>")).join("")+"</div></section>":"")+
+    '<p class="aviso">Cancelar entrega: la factura ya no se va a entregar; cancélala en Microsip o registra la devolución en la pestaña Devoluciones.</p>';
+}
+
+/* ---------- Evidencias ---------- */
+function docCyc(e){return e.contado===true?"Copia 2 + pago"+(e.forma_pago?" ("+e.forma_pago.toLowerCase()+")":""):e.contado===false?"Original firmada + copia 2":"Original firmada + copia 2 (crédito) o copia 2 + pago (contado)"}
+function vEvid(){
+  const puedeCyc=rol==="admin"||rol==="cyc", puedeArch=rol==="admin"||rol==="almacen";
+  const subs=rol==="cyc"?[["cyc","Crédito y Cobranza"]]:[["cyc","Crédito y Cobranza"],["arch","Archivo almacén"]];
+  if(!subs.some(x=>x[0]===sub)) sub=subs[0][0];
+  const t=sub, puede=t==="cyc"?puedeCyc:puedeArch, l=(verHechas?hechasEv(t):pendEv(t));
+  const grupos=new Map(); for(const e of l){if(!grupos.has(e.salida_id)) grupos.set(e.salida_id,[]); grupos.get(e.salida_id).push(e)}
+  const gs=[...grupos.entries()].sort((a,b)=>salida(a[0]).fecha.localeCompare(salida(b[0]).fecha));
+  const fila=e=>{const f=t==="cyc"?e.ev_cyc_fecha:e.ev_arch_fecha, quien=t==="cyc"?e.ev_cyc_por:e.ev_arch_por;
+    return '<label class="rev'+(sel.has(e.id)?" on":"")+'">'+(puede?'<input type="checkbox" data-a="sel" data-e="'+e.id+'"'+(sel.has(e.id)?" checked":"")+">":"<span></span>")+
+      "<span><b>"+esc(e.folio)+"</b> · "+esc(e.cliente||"")+" "+pago(e)+(e.resultado==="parcial"?' <span class="rtag">Parcial</span>':"")+
+      '<span class="sub">'+(t==="cyc"?docCyc(e):"Copia 3")+" · "+din(e.total)+(e.trae_evidencia===false?' · <b class="rojo">el chofer reportó que no trajo evidencia</b>':"")+
+      (f?" · "+(t==="cyc"?"recibió ":"archivó ")+esc(quien)+" "+fH(f)+(t==="arch"&&e.ev_arch_ubic?" en "+esc(e.ev_arch_ubic):""):" · entregada hace "+dias(e.registrado_fecha)+" días")+"</span></span></label>"};
+  return (subs.length>1?'<div class="seg" role="group" aria-label="Destino" id="esub">'+subs.map(([k,n])=>'<button type="button" data-a="sub" data-k="'+k+'" aria-pressed="'+(sub===k)+'">'+n+" ("+pendEv(k).length+")</button>").join("")+"</div>":"")+
+    '<section class="panel"><div class="ghead"><h2>'+(verHechas?(t==="cyc"?"Recibidas por Crédito y Cobranza":"Archivadas")+" (30 días)":(t==="cyc"?"Por entregar a Crédito y Cobranza":"Por archivar en almacén"))+" ("+l.length+')</h2><label class="rchk"><input type="checkbox" data-a="hechas"'+(verHechas?" checked":"")+"> Ver "+(t==="cyc"?"recibidas":"archivadas")+"</label></div>"+
+    (gs.length?gs.map(([sid,es])=>{const s=salida(sid);return '<div class="rgrupo"><div class="rgh"><b>'+fD(s.fecha)+" · "+esc(s.vehiculo)+" · "+esc(s.chofer)+"</b>"+
+      (puede?' <button type="button" class="link" data-a="selg" data-s="'+sid+'">Seleccionar '+es.length+"</button>":"")+"</div>"+es.map(fila).join("")+"</div>"}).join(""):'<div class="vacio">'+(verHechas?"Nada en los últimos 30 días.":"No hay evidencias pendientes.")+"</div>")+
+    "</section>"+
+    (puede&&l.length?'<section class="panel rbar"><span><b>'+sel.size+"</b> seleccionadas</span>"+
+      (verHechas?'<button type="button" class="btn" data-a="deshacer"'+(sel.size?"":" disabled")+">Deshacer</button>":
+       (t==="arch"?'<input type="text" id="eubic" class="busq" placeholder="Ubicación del archivo (ej. Caja oct-2026 #3)">':"")+
+       '<button type="button" class="prim" data-a="marcar"'+(sel.size?"":" disabled")+">"+(t==="cyc"?"Marcar recibidas":"Marcar archivadas")+"</button>")+
+      '<button type="button" class="btn" data-a="relacion">Imprimir relación</button></section>':"");
+}
+function relacion(){
+  const t=sub, l=(verHechas?hechasEv(t):pendEv(t)).filter(e=>!sel.size||sel.has(e.id));
+  const w=window.open("","_blank"); if(!w){aviso("Permite las ventanas emergentes para imprimir");return}
+  w.document.write('<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Relación de evidencias</title><style>body{font:13px Arial,sans-serif;margin:24px}h1{font-size:18px;margin:0 0 4px}'+
+    'table{border-collapse:collapse;width:100%;margin-top:12px}th,td{border:1px solid #999;padding:5px 6px;text-align:left}th{background:#eee}td.n{text-align:right}.f{display:flex;gap:40px;margin-top:48px}.f div{flex:1;border-top:1px solid #000;padding-top:4px;text-align:center}</style></head><body>'+
+    "<h1>SIGASA · Relación de evidencias — "+(t==="cyc"?"Crédito y Cobranza":"Archivo almacén")+"</h1><div>"+fD(HOY())+" · "+l.length+" facturas</div>"+
+    "<table><tr><th>#</th><th>Folio</th><th>Cliente</th><th>Salida</th><th>Documento</th><th>Total</th><th>Recibido</th></tr>"+
+    l.map((e,i)=>{const s=salida(e.salida_id);return "<tr><td>"+(i+1)+"</td><td>"+esc(e.folio)+"</td><td>"+esc(e.cliente||"")+"</td><td>"+fD(s.fecha)+" "+esc(s.vehiculo)+" "+esc(s.chofer)+"</td><td>"+(t==="cyc"?docCyc(e):"Copia 3")+'</td><td class="n">'+din(e.total)+"</td><td></td></tr>"}).join("")+
+    '</table><div class="f"><div>Entregó</div><div>Recibió</div></div><script>window.onload=()=>window.print()<\/script></body></html>');
+  w.document.close();
+}
+
+/* ---------- Eventos ---------- */
+function enlazar(){
+  const box=$("ecuerpo");
+  box.querySelectorAll("[data-a]").forEach(el=>{
+    const a=el.dataset.a, ev=el.tagName==="SELECT"||el.type==="checkbox"||el.type==="text"&&a==="com"?"onchange":"onclick";
+    el[ev]=()=>accion(a,el);
+  });
+  const nf=$("nfol"); if(nf) nf.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();agregarFolio(nf.value)}};
+  const nv=$("nvia"); if(nv) nv.onchange=()=>{guardarForm();N.via=nv.value;pintar()};
+}
+async function accion(a,el){
+  const sid=el.dataset.s, eid=el.dataset.e;
+  try{
+    switch(a){
+      case"nueva": N.abierta=true; N.items=[]; N.fecha=HOY(); pintar();
+        try{PR=await llamar("rp_por_repartir",{dias:10})}catch(e){PR=[]} pintar(); setTimeout(()=>$("nfol")&&$("nfol").focus(),30); return;
+      case"cerrarnueva": N.abierta=false; pintar(); return;
+      case"agregar": return agregarFolio($("nfol").value);
+      case"qitem": guardarForm(); N.items.splice(+el.dataset.k,1); pintar(); return;
+      case"addpr": return agregarFolio(el.dataset.f);
+      case"todasvia": {guardarForm(); const ya=new Set(N.items.map(i=>i.folio));
+        for(const p of PR.filter(p=>!ya.has(p.folio)&&(p.via||"Sin vía")===N.via)) N.items.push({folio:p.folio,cliente:p.cliente,via:p.via,contado:p.contado,total:p.total});
+        pintar(); return}
+      case"guardarsal": {guardarForm();
+        if(!N.veh||!N.cho){aviso("Elige el vehículo y el chofer");return}
+        el.disabled=true;
+        const id=await llamar("rp_crear_salida",{d:{fecha:N.fecha,vehiculo:N.veh,chofer:N.cho,folios:N.items.map(i=>i.folio)}});
+        N.abierta=false; N.items=[]; aviso("Salida registrada"); await cargar(); pintar(); const s=salida(id); if(s) hoja(s); return}
+      case"hoja": return hoja(salida(sid));
+      case"cansal": if(!confirm("¿Cancelar esta salida? Las facturas vuelven a quedar por repartir.")) return;
+        await llamar("rp_cancelar_salida",{sal:sid}); aviso("Salida cancelada"); return refrescar();
+      case"recibir": vista="recibir"; recib=sid; pintar(); window.scrollTo({top:0}); return;
+      case"volver": recib=null; pintar(); return;
+      case"res": {const b=borr.get(eid)||{}; b.resultado=el.dataset.r; if(b.resultado!=="no_entregada") b.motivo=null; borr.set(eid,b); return guardarRec(eid)}
+      case"mot": {const b=borr.get(eid)||{}; b.motivo=el.value; borr.set(eid,b); return guardarRec(eid)}
+      case"com": {const b=borr.get(eid)||{}; b.comentario=el.value; borr.set(eid,b); return guardarRec(eid)}
+      case"fp": {const b=borr.get(eid)||{}; b.forma_pago=el.value; borr.set(eid,b); return guardarRec(eid)}
+      case"ev": {const b=borr.get(eid)||{}; b.trae=el.checked; borr.set(eid,b); return guardarRec(eid)}
+      case"cerrarrec": await llamar("rp_cerrar_salida",{sal:sid,coment:$("rcoment").value}); aviso("Recepción cerrada"); recib=null; vista="recibir"; return refrescar();
+      case"reprog": await llamar("rp_decidir",{ent:eid,d:{decision:"reprogramar",fecha_reprog:$("rf_"+eid).value}}); aviso("Reprogramada"); return refrescar();
+      case"cancelar": {const m=prompt("¿Por qué ya no se va a entregar?"); if(m===null) return;
+        await llamar("rp_decidir",{ent:eid,d:{decision:"cancelar",comentario:m}}); aviso("Entrega cancelada"); return refrescar()}
+      case"sub": sub=el.dataset.k; sel.clear(); verHechas=false; pintar(); return;
+      case"hechas": verHechas=el.checked; sel.clear(); pintar(); return;
+      case"sel": el.checked?sel.add(eid):sel.delete(eid); pintar(); return;
+      case"selg": {const l=(verHechas?hechasEv(sub):pendEv(sub)).filter(e=>e.salida_id===sid); const todos=l.every(e=>sel.has(e.id));
+        for(const e of l) todos?sel.delete(e.id):sel.add(e.id); pintar(); return}
+      case"marcar": case"deshacer": {
+        const ubic=$("eubic")?$("eubic").value.trim():"";
+        if(a==="marcar"&&sub==="arch"&&!ubic){aviso("Escribe la ubicación del archivo");return}
+        const n=await llamar("rp_evidencia",{ids:[...sel],tipo:sub==="cyc"?"cyc":"archivo",ubic,quitar:a==="deshacer"});
+        aviso(a==="deshacer"?"Se deshicieron "+n:(sub==="cyc"?n+" marcadas como recibidas":n+" marcadas como archivadas")); sel.clear(); return refrescar()}
+      case"relacion": return relacion();
+    }
+  }catch(e){aviso(e.message); if(el) el.disabled=false}
+}
 })();
 </script>
