@@ -488,7 +488,7 @@ input.busq{flex:1 1 220px;min-width:0}
       </div>
       <div class="tabla-w"><table id="ctabla"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
       <div class="mas"><button type="button" class="btn" id="cvermas" hidden>Mostrar más</button></div>
-      <p class="aviso">Toca un renglón para filtrar por él. Saldo promedio: promedio del saldo de cada día. Ventas netas sin IVA menos devoluciones. Recuperación = saldo promedio ÷ venta neta diaria. Cobrado: cobros aplicados con IVA (sin devoluciones ni ajustes); la quincena es del 1 al 15 o del 16 a fin de mes. El cobrado se compara contra el mismo periodo del año anterior, hasta el mismo día cuando el mes está en curso.</p>
+      <p class="aviso">Toca un renglón para filtrar por él. Saldo vencido y días de atraso de la factura más atrasada: al corte de los datos (se muestran cuando el periodo incluye el último mes). Recuperación = saldo promedio del periodo ÷ venta neta diaria (sin IVA, menos devoluciones). Cobrado: cobros aplicados con IVA (sin devoluciones ni ajustes); la quincena es del 1 al 15 o del 16 a fin de mes. El cobrado se compara contra el mismo periodo del año anterior, hasta el mismo día cuando el mes está en curso.</p>
     </section>
   </div>
   <div id="pAlmacen" class="pestana" role="tabpanel" aria-labelledby="tabA" hidden>
@@ -1005,7 +1005,7 @@ function pasa(f){
   const F=st.f;
   return (!F.cobrador.size||F.cobrador.has(f.c))&&(!F.zona.size||F.zona.has(f.z))&&(!F.cliente.size||F.cliente.has(C.clientes.indexOf(f)));
 }
-function acum(){return {ss:0,dias:0,vn:0,cr:0,pi:0,pd:0,sf:0,cb:0,cq:0,cbA:null,cqA:null,t:new Array(C.tramos.length).fill(0)}}
+function acum(){return {ss:0,dias:0,vn:0,cr:0,pi:0,pd:0,sf:0,cb:0,cq:0,cbA:null,cqA:null,dm:0,t:new Array(C.tramos.length).fill(0)}}
 // Cobrado del mismo periodo del año anterior (12 meses antes); el mes del corte se compara hasta el mismo día
 function sumarAnt(a,f,idx){
   if(!f.q1||idx[0]<12) return; const Q=quincena(idx), ult=C.meses.length-1, parcial=Q.L===ult;
@@ -1031,10 +1031,11 @@ function sumar(a,f,idx,conT){
   sumarAnt(a,f,idx);
   a.sf+=f.sf[idx[idx.length-1]];
   if(conT&&f.t) for(let k=0;k<f.t.length;k++) a.t[k]+=f.t[k];
+  if(conT&&f.dm>a.dm) a.dm=f.dm;
 }
 function ind(a,idx){
   const dias=idx.reduce((s,i)=>s+C.dias[i],0), prom=a.ss/dias, rot=prom>0.005&&a.vn>0?a.vn/prom:null;
-  return {sf:a.sf,prom,vn:a.vn,cr:a.cr,rot,rec:rot?dias/rot:null,real:a.pi?a.pd/a.pi:null,cb:a.cb,cq:a.cq,cbA:a.cbA,cqA:a.cqA,t:a.t,venc:a.t.slice(1).reduce((s,v)=>s+v,0)};
+  return {sf:a.sf,prom,vn:a.vn,cr:a.cr,rot,rec:rot?dias/rot:null,real:a.pi?a.pd/a.pi:null,cb:a.cb,cq:a.cq,cbA:a.cbA,cqA:a.cqA,dm:a.dm,t:a.t,venc:a.t.slice(1).reduce((s,v)=>s+v,0)};
 }
 function llave(f,i){return st.dim==="cobrador"?f.c:st.dim==="zona"?f.z:i}
 function nombre(dim,k){return dim==="cobrador"?C.cobradores[k]:dim==="zona"?C.zonas[k]:C.clientes[k].n}
@@ -1089,17 +1090,17 @@ function pintarTabla(){
   filas=filas.slice().sort((x,y)=>{const a=val(x),b=val(y);
     if(a===null||b===null) return a===b?0:a===null?1:-1; // sin dato siempre al final
     return (typeof a==="string"?a.localeCompare(b,"es"):a-b)*o.dir});
-  const cols=[["n",d.t],["sf","Saldo al cierre"],["prom","Saldo promedio"],["vn","Ventas netas"],["cb","Cobrado periodo"],["rec","Recuperación"],["cq","Cobrado quincena"],["venc","Vencido al corte"]];
+  const cols=[["n",d.t],["sf","Saldo al cierre"],["venc","Saldo vencido"],["dm","Factura con más días de atraso"],["cb","Cobrado periodo"],["rec","Recuperación"],["cq","Cobrado quincena"]];
   const tb=$("ctabla");
   tb.tHead.innerHTML="<tr>"+cols.map(([c,t])=>'<th data-col="'+c+'" aria-sort="'+(o.col===c?(o.dir<0?"descending":"ascending"):"none")+'">'+t+(o.col===c?(o.dir<0?" ↓":" ↑"):"")+"</th>").join("")+"</tr>";
   tb.tHead.querySelectorAll("th").forEach(th=>th.onclick=()=>{const c=th.dataset.col;st.orden=o.col===c?{col:c,dir:-o.dir}:{col:c,dir:c==="n"?1:-1};pintarTabla()});
   const fila=(f,pie)=>"<td"+(pie?"":' title="'+esc(f.n)+'"')+">"+esc(f.n)+"</td>"+
-    '<td class="n">'+dinero(f.sf)+'</td><td class="n">'+dinero(f.prom)+'</td><td class="n">'+dinero(f.vn)+"</td>"+
+    '<td class="n">'+dinero(f.sf)+'</td><td class="n">'+(R.ultimo?dinero(f.venc):"—")+'</td><td class="n">'+(R.ultimo&&f.dm>0?fmt.format(f.dm)+(f.dm===1?" día":" días"):"—")+"</td>"+
     '<td class="n">'+dinero(f.cb)+(!pie&&f.cbA!=null?"<span class=\"sub\">"+cambio(f.cb,f.cbA,false,true)+"</span>":"")+"</td>"+
     '<td class="n">'+dec(f.rec,1)+(f.a&&!pie?"<span class=\"sub\">"+cambio(f.rec,f.a.rec,true,false)+"</span>":"")+"</td>"+
-    '<td class="n">'+dinero(f.cq)+(!pie&&f.cqA!=null?"<span class=\"sub\">"+cambio(f.cq,f.cqA,false,true)+"</span>":"")+'</td><td class="n">'+(R.ultimo?dinero(f.venc):"—")+"</td>";
+    '<td class="n">'+dinero(f.cq)+(!pie&&f.cqA!=null?"<span class=\"sub\">"+cambio(f.cq,f.cqA,false,true)+"</span>":"")+"</td>";
   tb.tBodies[0].innerHTML=filas.slice(0,st.limite).map(f=>'<tr data-k="'+f.k+'">'+fila(f,false)+"</tr>").join("")||
-    '<tr><td colspan="8" style="text-align:center;color:var(--ink-3);position:static">Sin saldos con estos filtros</td></tr>';
+    '<tr><td colspan="7" style="text-align:center;color:var(--ink-3);position:static">Sin saldos con estos filtros</td></tr>';
   const t=Object.assign({n:"Total ("+fmt.format(filas.length)+")"},R.tot);
   tb.tFoot.innerHTML="<tr>"+fila(t,true)+"</tr>";
   tb.tBodies[0].querySelectorAll("tr[data-k]").forEach(tr=>tr.onclick=()=>{
