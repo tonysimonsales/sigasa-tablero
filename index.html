@@ -1998,7 +1998,7 @@ let rpc=null, rol="", C=null, SAL=[], ENT=[], PR=[], vista="salidas", sub="cyc",
 const N={abierta:false,fecha:"",veh:"",cho:"",items:[],via:""};
 const borr=new Map(); // borradores de la recepción (no entregada sin motivo)
 const sel=new Set();
-const escribe=()=>rol==="admin"||rol==="almacen";
+const escribe=()=>rol==="admin"||rol==="almacen"||!!(C&&C.opera);
 
 async function llamar(fn,args){const {data,error}=await rpc(fn,args||{}); if(error) throw new Error(error.message); return data}
 function aviso(m){const a=$("aviso");a.textContent=m;a.hidden=false;clearTimeout(aviso.t);aviso.t=setTimeout(()=>a.hidden=true,3500)}
@@ -2006,7 +2006,6 @@ function aviso(m){const a=$("aviso");a.textContent=m;a.hidden=false;clearTimeout
 window.PANEL=window.PANEL||{};
 // La pestaña aparece solo si Supabase ya tiene las funciones (supabase/15_reparto.sql) y el rol puede verla
 window.PANEL.repartoIniciar=(fRpc,r)=>{rpc=fRpc; rol=r;
-  if(!["admin","supervisor","almacen","cyc"].includes(r)) return Promise.resolve(false);
   return llamar("rp_catalogos").then(c=>{C=c; $("tabE").hidden=false; if(rol==="cyc"){vista="evid";sub="cyc"} return cargar().then(()=>true)}).catch(()=>false)};
 window.PANEL.reparto=()=>prom||(prom=Promise.resolve().then(pintar));
 
