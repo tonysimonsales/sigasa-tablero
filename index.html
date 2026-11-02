@@ -195,6 +195,12 @@ tfoot td:first-child{background:var(--surface-2)}
 .rev .sub{display:block;color:var(--ink-3);font-size:.78rem}
 .rbar{position:sticky;bottom:0;z-index:2;display:flex;flex-wrap:wrap;gap:8px;align-items:center;box-shadow:0 -4px 12px rgba(0,0,0,.08)}
 .rbar .busq{flex:1 1 200px}
+.rbuscar{display:grid;gap:10px} .rbuscar .fila{display:flex;gap:8px;flex-wrap:nowrap} .rbuscar .busq{flex:1 1 auto;min-width:0}
+.rhist{display:grid;gap:8px;border-top:1px solid var(--line-soft);padding-top:10px}
+.rhist .estado{font-size:1rem;font-weight:600} .rhist .estado.ok{color:var(--good)} .rhist .estado.mal{color:var(--bad)} .rhist .estado.va{color:var(--s1)} .rhist .estado.esp{color:var(--s2)}
+.rtl{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:.84rem}
+.rtl li{display:grid;grid-template-columns:92px 1fr;gap:8px;border-left:2px solid var(--line);padding-left:8px}
+.rtl li span:first-child{color:var(--ink-3);font-family:var(--f-num);font-size:.78rem}
 .rchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px}
 .rchip{display:inline-block;font-size:.72rem;font-weight:600;border-radius:999px;padding:1px 8px;border:1px solid currentColor}
 .rchip.pen{color:var(--s1)} .rchip.env{color:var(--ink-3)} .rchip.ok{color:var(--good)}
@@ -527,6 +533,7 @@ input.busq{flex:1 1 220px;min-width:0}
     </section>
   </div>
   <div id="pReparto" class="pestana" role="tabpanel" aria-labelledby="tabE" hidden>
+    <section class="panel rbuscar"><div class="fila"><input type="search" id="ebus" class="busq" placeholder="Buscar factura por folio (ej. 184169)" autocomplete="off" aria-label="Buscar factura por folio"><button type="button" class="btn" id="ebusb">Buscar</button></div><div id="eres"></div></section>
     <div class="seg evistas" role="group" aria-label="Vista" id="evistas"></div>
     <div id="ecuerpo" class="pestana"></div>
   </div>
@@ -2021,7 +2028,7 @@ window.PANEL=window.PANEL||{};
 // La pestaña aparece solo si Supabase ya tiene las funciones (supabase/15_reparto.sql) y el rol puede verla
 window.PANEL.repartoIniciar=(fRpc,r)=>{rpc=fRpc; rol=r;
   return llamar("rp_catalogos").then(c=>{C=c; $("tabE").hidden=false; if(rol==="cyc"){vista="evid";sub="c"} return cargar().then(()=>true)}).catch(()=>false)};
-window.PANEL.reparto=()=>prom||(prom=Promise.resolve().then(pintar));
+window.PANEL.reparto=()=>prom||(prom=Promise.resolve().then(()=>{$("ebusb").onclick=buscarFactura;$("ebus").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();buscarFactura()}};pintar()}));
 
 async function cargar(){
   const desde=iso(new Date(Date.now()-45*864e5));
@@ -2279,6 +2286,54 @@ function estDest(e,d){
 function pendEnviar(){if(!REL) return []; return ENT.filter(e=>(e.resultado==="entregada"||e.resultado==="parcial")&&(estDest(e,"cyc").st==="falta"||estDest(e,"archivo").st==="falta"))}
 function relsPend(d){return (REL||[]).filter(r=>r.items.some(i=>i.destino===d&&i.estado==="pendiente"))}
 
+
+/* ---------- Buscador de facturas ---------- */
+async function buscarFactura(){
+  const q=$("ebus").value.trim(), box=$("eres"); if(!q){box.innerHTML="";return}
+  box.innerHTML='<div class="cargando" style="padding:8px 0">Buscando…</div>';
+  try{box.innerHTML=historial(await llamar("rp_historial",{q}))}
+  catch(e){box.innerHTML='<div class="vacio">'+esc(/rp_historial/.test(e.message)?"Falta activar el buscador (supabase/20_reparto_buscar.sql).":e.message)+"</div>"}
+}
+function historial(h){
+  const f=h.factura, es=(h.entregas||[]).filter(e=>e.s_estado!=="cancelada"), its=h.items||[];
+  if(!f&&!es.length) return '<div class="rhist"><div class="estado mal">No encontré el folio '+esc(h.folio)+'</div><div class="sub2">No está en las facturas de los últimos 120 días ni en ninguna salida.</div></div>';
+  const u=es[es.length-1];
+  const evd=(d,e)=>{const ok=its.filter(i=>i.destino===d&&i.estado==="recibida").pop(), p=its.find(i=>i.destino===d&&i.estado==="pendiente"), fa=its.filter(i=>i.destino===d&&i.estado==="faltante").pop();
+    const n=d==="cyc"?"Crédito y Cobranza":"Archivo almacén";
+    if((d==="cyc"?e.ev_cyc_fecha:e.ev_arch_fecha)) return '<span class="rchip ok">'+n+": recibida"+(ok?" en "+ok.rel+" por "+esc(ok.confirmado_por):" por "+esc(d==="cyc"?e.ev_cyc_por:e.ev_arch_por))+(d==="archivo"&&e.ev_arch_ubic?" · "+esc(e.ev_arch_ubic):"")+"</span>";
+    if(p) return '<span class="rchip env">'+n+": enviada en "+p.rel+", por confirmar</span>";
+    return '<span class="rchip pen">'+n+": pendiente de enviar"+(fa?" (faltó en "+fa.rel+': "'+esc(fa.nota||"")+'")':"")+"</span>"};
+  let est, cls, extra="";
+  if(f&&f.estatus==="C"){est="Factura cancelada en Microsip";cls="mal"}
+  else if(!u){
+    if(!h.es_reparto){est="No es de reparto";cls="esp";extra="Vía de embarque: "+esc(f.via||"sin vía")+"; no pasa por las camionetas."}
+    else if(h.inicio&&f.fecha<h.inicio){est="Anterior al arranque de Reparto";cls="esp";extra="Se facturó el "+fD(f.fecha)+"; Reparto cuenta desde el "+fD(h.inicio)+"."}
+    else{est="Por repartir";cls="va";extra="Facturada el "+fD(f.fecha)+"; todavía no sale en ninguna camioneta."}}
+  else if(!u.resultado){est="En ruta";cls="va";extra="Salió el "+fD(u.s_fecha)+" en "+esc(u.s_vehiculo)+" con "+esc(u.s_chofer)+"."}
+  else if(u.resultado==="no_entregada"){
+    if(u.decision==="reprogramar"){est="Reprogramada, esperando salir";cls="esp";extra="No se entregó ("+esc(u.motivo)+"); reprogramada al "+fD(u.fecha_reprog)+"."}
+    else if(u.decision==="cancelar"){est="Entrega cancelada";cls="mal";extra="No se entregó ("+esc(u.motivo)+")"+(u.decision_comentario?': "'+esc(u.decision_comentario)+'"':"")+"."}
+    else{est="No entregada, sin decisión";cls="mal";extra="Motivo: "+esc(u.motivo)+(u.comentario?' · "'+esc(u.comentario)+'"':"")+". Falta reprogramar o cancelar."}}
+  else{est=(u.resultado==="parcial"?"Entregada parcial":"Entregada");cls="ok";
+    extra="El "+fD(u.s_fecha)+" en "+esc(u.s_vehiculo)+" con "+esc(u.s_chofer)+(u.contado&&u.pagada===false?' · <b class="rojo">contado NO pagada</b>':"")+(u.trae_evidencia===false?' · <b class="rojo">el chofer no trajo evidencia</b>':"")+
+      '<div class="rchips">'+evd("cyc",u)+evd("archivo",u)+"</div>"}
+  // Línea de tiempo
+  const ev=[];
+  if(f) ev.push([f.fecha+"T00:00","Facturada · "+esc(f.via||"")]);
+  es.forEach((e,k)=>{
+    ev.push([e.s_creado,"Salió en "+esc(e.s_vehiculo)+" con "+esc(e.s_chofer)+(es.length>1?" (intento "+(k+1)+")":"")+" · registró "+esc(e.s_creado_por||"")]);
+    if(e.registrado_fecha) ev.push([e.registrado_fecha,(e.resultado==="no_entregada"?"No entregada: "+esc(e.motivo):e.resultado==="parcial"?"Entregada parcial":"Entregada")+(e.contado&&e.resultado!=="no_entregada"?(e.pagada===false?" · no pagada":" · pagada"):"")+(e.comentario?' · "'+esc(e.comentario)+'"':"")+" · recibió "+esc(e.registrado_por||"")]);
+    if(e.decision_fecha) ev.push([e.decision_fecha,(e.decision==="reprogramar"?"Reprogramada al "+fD(e.fecha_reprog):"Entrega cancelada")+" · "+esc(e.decision_por||"")]);
+  });
+  for(const i of its){const n=i.destino==="cyc"?"Crédito":"Archivo";
+    ev.push([i.rel_creado,"Enviada a "+n+" en "+i.rel+" · "+esc(i.rel_creado_por||"")]);
+    if(i.confirmado_fecha) ev.push([i.confirmado_fecha,(i.estado==="recibida"?n+" la recibió":n+' no la recibió: "'+esc(i.nota||"")+'"')+(i.ubicacion?" · "+esc(i.ubicacion):"")+" · "+esc(i.confirmado_por||"")])}
+  ev.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+  const base=f||u;
+  return '<div class="rhist"><div><b>'+esc(h.folio)+"</b> · "+esc(base.cliente||"")+" "+pago(base)+'<div class="sub2">'+(f?"Facturada el "+fD(f.fecha)+" · ":"")+din(base.total)+(f&&f.vendedor?" · "+esc(f.vendedor):"")+"</div></div>"+
+    '<div class="estado '+cls+'">'+est+'</div><div class="sub2">'+extra+"</div>"+
+    '<ul class="rtl">'+ev.map(([t,x])=>"<li><span>"+(String(t).length>10&&!String(t).endsWith("T00:00")?fH(t):fD(String(t).slice(0,10)))+"</span><span>"+x+"</span></li>").join("")+"</ul></div>";
+}
 /* ---------- Eventos ---------- */
 function enlazar(){
   const box=$("ecuerpo");
