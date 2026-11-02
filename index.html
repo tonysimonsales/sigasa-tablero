@@ -946,6 +946,9 @@ function ponerCorte(){
   if(enA&&act){const hoy=(d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"))(new Date());
     const [y,m,d]=act.slice(0,10).split("-");
     $("corte").innerHTML="Almacén: datos de Microsip "+(act.slice(0,10)===hoy?"de <b>hoy":"del <b>"+(+d)+" "+MESN[+m-1]+" "+y)+" a las "+act.slice(11,16)+"</b>";}
+  else if($("tabE").getAttribute("aria-selected")==="true"&&window.RP_ACT){const a=window.RP_ACT, hoy=(d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"))(new Date());
+    const [y,m,d]=a.slice(0,10).split("-");
+    $("corte").innerHTML="Reparto: facturas de Microsip "+(a.slice(0,10)===hoy?"de <b>hoy":"del <b>"+(+d)+" "+MESN[+m-1]+" "+y)+" a las "+a.slice(11,16)+"</b>";}
   else if(window.CORTE_HTML) $("corte").innerHTML=window.CORTE_HTML;
 }
 window.ponerCorte=ponerCorte;
@@ -1993,7 +1996,6 @@ const fD=s=>{if(!s)return"—";const d=new Date(s.length<=10?s+"T12:00:00":s);re
 const fH=s=>{if(!s)return"";const d=new Date(s);return fD(s)+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
 const dias=s=>s?Math.max(0,Math.round((new Date(HOY()+"T12:00:00")-new Date((s.length<=10?s+"T12:00:00":s)))/864e5)):0;
 const pago=e=>e.contado===true?'<span class="rtag c">Contado</span>':e.contado===false?'<span class="rtag">Crédito</span>':"";
-const FORMAS=["Efectivo","Transferencia","Cheque","No pagó"];
 let rpc=null, rol="", C=null, SAL=[], ENT=[], PR=[], vista="salidas", sub="cyc", verHechas=false, recib=null, prom=null;
 const N={abierta:false,fecha:"",veh:"",cho:"",items:[],via:""};
 const borr=new Map(); // borradores de la recepción (no entregada sin motivo)
@@ -2011,7 +2013,8 @@ window.PANEL.reparto=()=>prom||(prom=Promise.resolve().then(pintar));
 
 async function cargar(){
   const desde=iso(new Date(Date.now()-45*864e5));
-  [SAL,ENT]=await Promise.all([llamar("rp_salidas_lista",{desde}),llamar("rp_entregas_lista",{desde})]);
+  let c2; [SAL,ENT,c2]=await Promise.all([llamar("rp_salidas_lista",{desde}),llamar("rp_entregas_lista",{desde}),llamar("rp_catalogos").catch(()=>null)]);
+  if(c2) C=c2; window.RP_ACT=C&&C.actualizado||null; if(window.ponerCorte) window.ponerCorte();
   const pend=rol==="cyc"?pendEv("cyc").length:SAL.filter(s=>s.estado==="en_ruta").length+sinDecision().length;
   const b=$("ebadge"); b.textContent=pend; b.hidden=!pend;
 }
@@ -2131,14 +2134,15 @@ function vRecibir(){
     recib=null;
     return '<section class="panel"><div class="ghead"><h2>Camionetas en ruta</h2></div>'+(er.length?'<div class="rlista">'+er.map(tarjSalida).join("")+"</div>":'<div class="vacio">No hay camionetas en ruta.</div>')+"</section>";
   }
-  const s=salida(recib), es=deSalida(s.id), r=resumenSalida(es), falt=es.filter(e=>!e.resultado).length;
+  const s=salida(recib), es=deSalida(s.id), r=resumenSalida(es), falt=es.filter(e=>!e.resultado).length, sinG=es.filter(e=>borr.has(e.id)).length;
   return '<section class="panel"><div class="ghead"><h2>Recibir: '+esc(s.vehiculo)+" · "+esc(s.chofer)+'</h2><button type="button" class="link" data-a="volver">Volver</button></div>'+
     '<div class="sub2">Salió el '+fD(s.fecha)+" con "+es.length+" facturas. Marca cada una; se guarda al momento.</div></section>"+
     '<div class="rlista">'+es.map(filaRecibir).join("")+"</div>"+
-    '<section class="panel rcierre"><div class="rres"><span><b>'+r.ent+"</b> entregadas</span><span><b>"+r.par+"</b> parciales</span><span><b>"+r.no+'</b> no entregadas</span><span><b>'+falt+"</b> por marcar</span>"+
-    "<span>Efectivo y pagos de contado: <b>"+din(es.filter(e=>e.contado&&e.resultado&&e.resultado!=="no_entregada"&&e.forma_pago!=="No pagó").reduce((a,e)=>a+(+e.total||0),0))+"</b></span>"+
+    '<section class="panel rcierre"><div class="rres"><span><b>'+r.ent+"</b> entregadas</span><span><b>"+r.par+"</b> parciales</span><span><b>"+r.no+'</b> no entregadas</span><span><b>'+falt+"</b> por marcar</span>"+(sinG?'<span class="rojo"><b>'+sinG+"</b> sin guardar (falta motivo o comentario)</span>":"")+
+    "<span>Contado pagado: <b>"+din(es.filter(e=>e.contado&&e.resultado&&e.resultado!=="no_entregada"&&e.pagada!==false).reduce((a,e)=>a+(+e.total||0),0))+"</b></span>"+
+    (es.some(e=>e.contado&&e.resultado&&e.resultado!=="no_entregada"&&e.pagada===false)?'<span class="rojo"><b>'+es.filter(e=>e.contado&&e.resultado&&e.resultado!=="no_entregada"&&e.pagada===false).length+"</b> de contado sin pagar</span>":"")+
     (r.sinEv?'<span class="rojo"><b>'+r.sinEv+"</b> sin evidencia firmada</span>":"")+"</div>"+
-    '<div class="fila"><input type="text" id="rcoment" class="busq" placeholder="Comentario de la recepción (opcional)"><button type="button" class="prim" data-a="cerrarrec" data-s="'+s.id+'"'+(falt?" disabled":"")+">Cerrar recepción</button></div></section>";
+    '<div class="fila"><input type="text" id="rcoment" class="busq" placeholder="Comentario de la recepción (opcional)"><button type="button" class="prim" data-a="cerrarrec" data-s="'+s.id+'"'+(falt||sinG?" disabled":"")+">Cerrar recepción</button></div></section>";
 }
 function filaRecibir(e){
   const b=borr.get(e.id)||{}, res=b.resultado||e.resultado||"", mot=b.motivo!=null?b.motivo:(e.motivo||"");
@@ -2147,9 +2151,11 @@ function filaRecibir(e){
   if(res==="no_entregada") det='<div class="fila"><select data-a="mot" data-e="'+e.id+'" aria-label="Motivo"><option value="">Motivo…</option>'+C.motivos.map(m=>"<option"+(m===mot?" selected":"")+">"+esc(m)+"</option>").join("")+"</select>"+
     '<input type="text" class="busq" data-a="com" data-e="'+e.id+'" placeholder="Comentario" value="'+esc(b.comentario!=null?b.comentario:(e.comentario||""))+'"></div>'+(!e.resultado||e.resultado!=="no_entregada"||!e.motivo?'<div class="rojo sub2">Elige el motivo para guardar</div>':"");
   else if(res){
-    det='<div class="fila">'+(e.contado!==false?'<select data-a="fp" data-e="'+e.id+'" aria-label="Forma de pago"><option value="">'+(e.contado?"Forma de pago…":"Pago (si fue de contado)…")+"</option>"+FORMAS.map(f=>"<option"+(f===e.forma_pago?" selected":"")+">"+f+"</option>").join("")+"</select>":"")+
-      '<label class="rchk"><input type="checkbox" data-a="ev" data-e="'+e.id+'"'+(e.trae_evidencia!==false?" checked":"")+"> Trae evidencia firmada</label>"+
-      '<input type="text" class="busq" data-a="com" data-e="'+e.id+'" placeholder="Comentario" value="'+esc(e.comentario||"")+'"></div>'+
+    const pag=b.pag!=null?b.pag:(e.pagada!==false), com=b.comentario!=null?b.comentario:(e.comentario||"");
+    det='<div class="fila">'+(e.contado===true?'<label class="rchk"><input type="checkbox" data-a="pag" data-e="'+e.id+'"'+(pag?" checked":"")+"> Está pagada</label>":"")+
+      '<label class="rchk"><input type="checkbox" data-a="ev" data-e="'+e.id+'"'+((b.trae!=null?b.trae:e.trae_evidencia!==false)?" checked":"")+"> Trae evidencia firmada</label>"+
+      '<input type="text" class="busq" data-a="com" data-e="'+e.id+'" placeholder="'+(e.contado===true&&!pag?"Comentario (obligatorio: ¿por qué no está pagada?)":"Comentario")+'" value="'+esc(com)+'"></div>'+
+      (e.contado===true&&!pag&&!com.trim()?'<div class="rojo sub2">Si no está pagada, escribe un comentario para guardar</div>':"")+
       (res==="parcial"?'<div class="sub2">Lo que regresó se registra en la pestaña Devoluciones.</div>':"");
   }
   return '<div class="rcard'+(res?" r-"+res:"")+'"><div class="top"><b>'+esc(e.folio)+" · "+esc(e.cliente||"(aún no está en los datos)")+"</b>"+pago(e)+'</div><div class="sub2">'+din(e.total)+(e.via?" · "+esc(e.via):"")+(intentos(e.folio)>1?' · <span class="rojo">intento '+intentos(e.folio)+"</span>":"")+"</div>"+
@@ -2158,12 +2164,13 @@ function filaRecibir(e){
 async function guardarRec(id){
   const e=ENT.find(x=>x.id===id), b=borr.get(id)||{};
   const d={resultado:b.resultado||e.resultado, motivo:b.motivo!=null?b.motivo:e.motivo, comentario:b.comentario!=null?b.comentario:e.comentario,
-           forma_pago:b.forma_pago!=null?b.forma_pago:e.forma_pago, trae_evidencia:b.trae!=null?b.trae:(e.trae_evidencia!==false)};
+           forma_pago:null, trae_evidencia:b.trae!=null?b.trae:(e.trae_evidencia!==false), pagada:b.pag!=null?b.pag:(e.pagada!==false)};
   if(!d.resultado) return;
   if(d.resultado==="no_entregada"&&!d.motivo){borr.set(id,b);pintar();return}
+  if(d.resultado!=="no_entregada"&&e.contado===true&&!d.pagada&&!(d.comentario||"").trim()){borr.set(id,b);pintar();return}
   try{await llamar("rp_registrar",{ent:id,d}); borr.delete(id);
-    Object.assign(e,{resultado:d.resultado,motivo:d.resultado==="no_entregada"?d.motivo:null,comentario:d.comentario||null,forma_pago:d.forma_pago||null,
-      trae_evidencia:d.resultado==="no_entregada"?null:d.trae_evidencia});
+    Object.assign(e,{resultado:d.resultado,motivo:d.resultado==="no_entregada"?d.motivo:null,comentario:(d.comentario||"").trim()||null,forma_pago:null,
+      trae_evidencia:d.resultado==="no_entregada"?null:d.trae_evidencia,pagada:d.resultado!=="no_entregada"&&e.contado===true?d.pagada:null});
   }catch(err){aviso(err.message)}
   pintar();
 }
@@ -2186,7 +2193,7 @@ function vNoEnt(){
 }
 
 /* ---------- Evidencias ---------- */
-function docCyc(e){return e.contado===true?"Copia 2 + pago"+(e.forma_pago?" ("+e.forma_pago.toLowerCase()+")":""):e.contado===false?"Original firmada + copia 2":"Original firmada + copia 2 (crédito) o copia 2 + pago (contado)"}
+function docCyc(e){return e.contado===true?(e.pagada===false?'Copia 2 · <b class="rojo">NO PAGADA</b>'+(e.comentario?" (“"+esc(e.comentario)+"”)":""):"Copia 2 + pago"):e.contado===false?"Original firmada + copia 2":"Original firmada + copia 2 (crédito) o copia 2 + pago (contado)"}
 function vEvid(){
   const puedeCyc=rol==="admin"||rol==="cyc", puedeArch=rol==="admin"||rol==="almacen";
   const subs=rol==="cyc"?[["cyc","Crédito y Cobranza"]]:[["cyc","Crédito y Cobranza"],["arch","Archivo almacén"]];
@@ -2258,7 +2265,7 @@ async function accion(a,el){
       case"res": {const b=borr.get(eid)||{}; b.resultado=el.dataset.r; if(b.resultado!=="no_entregada") b.motivo=null; borr.set(eid,b); return guardarRec(eid)}
       case"mot": {const b=borr.get(eid)||{}; b.motivo=el.value; borr.set(eid,b); return guardarRec(eid)}
       case"com": {const b=borr.get(eid)||{}; b.comentario=el.value; borr.set(eid,b); return guardarRec(eid)}
-      case"fp": {const b=borr.get(eid)||{}; b.forma_pago=el.value; borr.set(eid,b); return guardarRec(eid)}
+      case"pag": {const b=borr.get(eid)||{}; b.pag=el.checked; borr.set(eid,b); return guardarRec(eid)}
       case"ev": {const b=borr.get(eid)||{}; b.trae=el.checked; borr.set(eid,b); return guardarRec(eid)}
       case"cerrarrec": await llamar("rp_cerrar_salida",{sal:sid,coment:$("rcoment").value}); aviso("Recepción cerrada"); recib=null; vista="recibir"; return refrescar();
       case"reprog": await llamar("rp_decidir",{ent:eid,d:{decision:"reprogramar",fecha_reprog:$("rf_"+eid).value}}); aviso("Reprogramada"); return refrescar();
