@@ -1925,11 +1925,14 @@ function pintarPago(){
 /* ---------- Selector de tipos y proveedores ---------- */
 function selector(k){
   const velo=$("velo"), s=new Set(st[k]), esP=k==="provs";
-  const cuenta=new Map(); for(const d of docs) if(!(st.viejas&&d.a>365)){const x=esP?d.p:D.provs[d.p][1]; cuenta.set(x,(cuenta.get(x)||0)+d.s)}
+  // Proveedores: solo los del tipo (o tipos) elegidos en el filtro de tipo
+  const delTipo=p=>!esP||!st.tipos.size||st.tipos.has(D.provs[p][1]);
+  const cuenta=new Map(); for(const d of docs) if(!(st.viejas&&d.a>365)&&delTipo(d.p)){const x=esP?d.p:D.provs[d.p][1]; cuenta.set(x,(cuenta.get(x)||0)+d.s)}
   const todas=(esP?D.provs.map((p,i)=>({i,n:p[0]})):D.tipos.map((n,i)=>({i,n}))).filter(o=>cuenta.has(o.i)).sort((a,b)=>a.n.localeCompare(b.n,"es"));
   velo.innerHTML='<div class="hoja" role="dialog" aria-modal="true" aria-label="Filtrar por '+(esP?"proveedor":"tipo")+'"><header><h3>'+(esP?"Proveedores":"Tipo de proveedor")+'</h3><button type="button" class="link" id="xscerrar">Cerrar</button></header>'+
-    (esP?'<div class="bus"><input type="search" id="xsbus" placeholder="Buscar proveedor" autocomplete="off"></div>':"")+'<ul id="xslista"></ul>'+
-    '<div class="pie"><span>'+(esP&&(D.habituales||[]).length?'<button type="button" class="link" id="xshab">Usar los habituales</button>':"")+'<button type="button" class="link" id="xslimpiar">Quitar selección</button></span><button type="button" class="prim" id="xsaplicar">Aplicar</button></div></div>';
+    (esP?'<div class="bus"><input type="search" id="xsbus" placeholder="Buscar proveedor" autocomplete="off"></div>'+
+      (st.tipos.size?'<div class="nota">Solo proveedores de: '+esc([...st.tipos].map(i=>D.tipos[i]).join(", "))+"</div>":""):"")+'<ul id="xslista"></ul>'+
+    '<div class="pie"><span>'+(esP?'<button type="button" class="link" id="xstodos">Marcar todos</button>':"")+'<button type="button" class="link" id="xslimpiar">Quitar selección</button></span><button type="button" class="prim" id="xsaplicar">Aplicar</button></div></div>';
   const lista=q=>{$("xslista").innerHTML=todas.filter(o=>!q||o.n.toLowerCase().includes(q)).map(o=>'<li><label><input type="checkbox" data-i="'+o.i+'" '+(s.has(o.i)?"checked":"")+'><span class="tx">'+esc(o.n)+'</span><span class="cl" style="margin-left:auto">'+pesos(cuenta.get(o.i))+"</span></label></li>").join("");
     $("xslista").querySelectorAll("input").forEach(i=>i.onchange=()=>{const n=+i.dataset.i;i.checked?s.add(n):s.delete(n)})};
   lista("");
@@ -1937,9 +1940,12 @@ function selector(k){
   const cerrar=()=>{velo.hidden=true;velo.innerHTML=""};
   $("xscerrar").onclick=cerrar; velo.onclick=e=>{if(e.target===velo)cerrar()};
   if(esP){$("xsbus").oninput=e=>lista(e.target.value.trim().toLowerCase()); setTimeout(()=>$("xsbus").focus(),30)}
-  if($("xshab")) $("xshab").onclick=()=>{s.clear();(D.habituales||[]).forEach(i=>s.add(i));lista(esP?$("xsbus").value.trim().toLowerCase():"")};
+  if($("xstodos")) $("xstodos").onclick=()=>{const q=$("xsbus").value.trim().toLowerCase();todas.filter(o=>!q||o.n.toLowerCase().includes(q)).forEach(o=>s.add(o.i));lista(q)};
   $("xslimpiar").onclick=()=>{s.clear();lista(esP?$("xsbus").value.trim().toLowerCase():"")};
-  $("xsaplicar").onclick=()=>{st[k]=s;guardarFiltros();cerrar();pintar()};
+  $("xsaplicar").onclick=()=>{st[k]=s;
+    // Al cambiar el tipo, se quitan los proveedores elegidos que no son de ese tipo
+    if(!esP&&s.size) st.provs=new Set([...st.provs].filter(p=>s.has(D.provs[p][1])));
+    guardarFiltros();cerrar();pintar()};
 }
 
 /* ---------- Resumen para correo ---------- */
