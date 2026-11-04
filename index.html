@@ -195,6 +195,7 @@ tfoot td:first-child{background:var(--surface-2)}
 .rev .sub{display:block;color:var(--ink-3);font-size:.78rem}
 .rbar{position:sticky;bottom:0;z-index:2;display:flex;flex-wrap:wrap;gap:8px;align-items:center;box-shadow:0 -4px 12px rgba(0,0,0,.08)}
 .rbar .busq{flex:1 1 200px}
+.robs{font-size:.86rem;background:var(--surface-2);border-left:3px solid var(--s1);padding:4px 8px;border-radius:4px}
 .rx{flex:none;width:30px;height:30px;min-height:0;padding:0;border-radius:50%;border:1px solid var(--bad);background:var(--surface);color:var(--bad);font-size:.8rem;cursor:pointer;line-height:1}
 .rx:hover{background:var(--bad);color:#fff}
 .rxb{border:1px solid var(--bad);color:var(--bad);background:var(--surface);border-radius:var(--r);padding:6px 12px;min-height:36px;cursor:pointer;font-weight:600}
@@ -2254,7 +2255,7 @@ function vPendEnviar(){
       gs.map(([sid,es])=>{const s=salida(sid);return '<div class="rgrupo"><div class="rgh"><b>'+fD(s.fecha)+" · "+esc(s.vehiculo)+" · "+esc(s.chofer)+"</b>"+
         (puede?' <button type="button" class="link" data-a="selg" data-s="'+sid+'">Seleccionar '+es.length+"</button>":"")+"</div>"+es.map(fila).join("")+"</div>"}).join("")
      :'<div class="vacio">No hay facturas pendientes de enviar.</div>')+"</section>"+
-    (puede&&l.length?'<section class="panel rbar"><span><b>'+sel.size+"</b> seleccionadas"+(sel.size?" · "+din(tot):"")+'</span><button type="button" class="prim" data-a="generar"'+(sel.size?"":" disabled")+">Generar relación para enviar ("+sel.size+")</button></section>":"")+
+    (puede&&l.length?'<section class="panel rbar"><span><b>'+sel.size+"</b> seleccionadas"+(sel.size?" · "+din(tot):"")+'</span><button type="button" class="prim" data-a="generar"'+(sel.size?"":" disabled")+">Generar relación para enviar ("+sel.size+')</button><input type="text" id="relobs" class="busq" maxlength="300" placeholder="Observaciones (opcional)" aria-label="Observaciones de la relación"></section>':"")+
     '<section class="panel"><div class="ghead"><h2>Relaciones enviadas (30 días)</h2></div>'+(env.length?'<div class="rlista">'+env.map(tarjRel).join("")+"</div>":'<div class="vacio">Ninguna todavía.</div>')+"</section>";
 }
 function resDest(r,d){const it=r.items.filter(i=>i.destino===d); if(!it.length) return null;
@@ -2271,7 +2272,7 @@ function tarjRel(r){
       return '<div class="rxrow"><span><b>'+esc(i0.folio)+"</b> · "+esc(i0.cliente||"")+'<span class="sub">'+[st("cyc"),st("archivo")].filter(Boolean).join(" · ")+"</span></span>"+X("xrelf",'data-r="'+r.id+'" data-e="'+id+'"',"Quitar de la relación")+"</div>"}).join(""):"";
   return '<div class="rcard"><div class="top"><span><span class="rfolio">'+esc(r.folio)+"</span> · "+ents.size+(ents.size>1?" facturas":" factura")+" · "+din(tot)+'</span><span class="rtop"><span class="sub2">'+esc(r.creado_por||"")+" "+fH(r.creado)+"</span>"+
       (ed||(sinConf&&escribe())?X("xrel",'data-r="'+r.id+'"',"Eliminar relación"):"")+"</span></div>"+
-    '<div class="sub2">'+lin("cyc")+lin("archivo")+"</div>"+filas+
+    (r.observaciones?'<div class="robs">Observaciones: “'+esc(r.observaciones)+'”</div>':"")+'<div class="sub2">'+lin("cyc")+lin("archivo")+"</div>"+filas+
     (ed&&(conf("cyc")||conf("archivo"))?'<div class="acc">'+(conf("cyc")?'<button type="button" class="rxb" data-a="xconf" data-r="'+r.id+'" data-d="cyc">Deshacer confirmación de Crédito</button>':"")+
       (conf("archivo")?'<button type="button" class="rxb" data-a="xconf" data-r="'+r.id+'" data-d="archivo">Deshacer confirmación del Archivo</button>':"")+"</div>":"")+"</div>";
 }
@@ -2281,7 +2282,7 @@ function vDestino(d){
   const doc=i=>d==="cyc"?docCyc(i):"Copia 3";
   const card=r=>{const it=r.items.filter(i=>i.destino===d&&i.estado==="pendiente"), ok=it.filter(i=>!unchk.has(i.id)).length;
     return '<div class="rcard rrel"><div class="top"><span><span class="rfolio">'+esc(r.folio)+"</span> · "+it.length+(it.length>1?" facturas":" factura")+'</span><span class="rest env">Por confirmar</span></div>'+
-      '<div class="sub2">Envió '+esc(r.creado_por||"")+" "+fH(r.creado)+"."+(puede?" Desmarca las que no vengan en el paquete.":" Esperando a que "+(d==="cyc"?"Crédito y Cobranza":"el archivo del almacén")+" confirme.")+"</div>"+
+      (r.observaciones?'<div class="robs">Observaciones: “'+esc(r.observaciones)+'”</div>':"")+'<div class="sub2">Envió '+esc(r.creado_por||"")+" "+fH(r.creado)+"."+(puede?" Desmarca las que no vengan en el paquete.":" Esperando a que "+(d==="cyc"?"Crédito y Cobranza":"el archivo del almacén")+" confirme.")+"</div>"+
       it.map(i=>'<label class="rrow'+(unchk.has(i.id)?" no":"")+'">'+(puede?'<input type="checkbox" data-a="unchk" data-i="'+i.id+'"'+(unchk.has(i.id)?"":" checked")+">":"<span></span>")+
         "<span><b>"+esc(i.folio)+"</b> · "+esc(i.cliente||"")+" "+(d==="cyc"?pago(i):"")+'<span class="sub">'+doc(i)+" · "+din(i.total)+" · "+esc(fD(i.salida.slice(0,10))+i.salida.slice(10))+(unchk.has(i.id)?' · <b class="rojo">no la recibí</b>':"")+"</span></span></label>").join("")+
       (puede?(ok<it.length?'<input type="text" class="busq" id="rn_'+r.id+'" placeholder="¿Qué faltó? (obligatorio)" style="width:100%">':"")+
@@ -2346,7 +2347,7 @@ function historial(h){
     if(e.decision_fecha) ev.push([e.decision_fecha,(e.decision==="reprogramar"?"Reprogramada al "+fD(e.fecha_reprog):"Entrega cancelada")+" · "+esc(e.decision_por||"")]);
   });
   for(const i of its){const n=i.destino==="cyc"?"Crédito":"Archivo";
-    ev.push([i.rel_creado,"Enviada a "+n+" en "+i.rel+" · "+esc(i.rel_creado_por||"")]);
+    ev.push([i.rel_creado,"Enviada a "+n+" en "+i.rel+" · "+esc(i.rel_creado_por||"")+(i.rel_obs?' · “'+esc(i.rel_obs)+'”':"")]);
     if(i.confirmado_fecha) ev.push([i.confirmado_fecha,(i.estado==="recibida"?n+" la recibió":n+' no la recibió: "'+esc(i.nota||"")+'"')+(i.ubicacion?" · "+esc(i.ubicacion):"")+" · "+esc(i.confirmado_por||"")])}
   for(const b of h.bitacora||[]) ev.push([b.fecha,'<span class="rojo">✕ '+(b.editor?"Corrección de ":"")+esc(b.quien||"")+": "+esc(b.accion)+(b.detalle?" ("+esc(b.detalle)+")":"")+(b.motivo?' · "'+esc(b.motivo)+'"':"")+"</span>"]);
   ev.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
@@ -2402,7 +2403,7 @@ function enlazar(){
   });
   const nf=$("nfol"); if(nf) nf.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();agregarFolio(nf.value)}};
   const nv=$("nvia"); if(nv) nv.onchange=()=>{guardarForm();N.via=nv.value;pintar()};
-  box.querySelectorAll('[id^="rn_"],[id^="ru_"]').forEach(x=>{if(NT[x.id]!=null) x.value=NT[x.id]; x.oninput=()=>{NT[x.id]=x.value}});
+  box.querySelectorAll('[id^="rn_"],[id^="ru_"],#relobs').forEach(x=>{if(NT[x.id]!=null) x.value=NT[x.id]; x.oninput=()=>{NT[x.id]=x.value}});
 }
 async function accion(a,el){
   const sid=el.dataset.s, eid=el.dataset.e;
@@ -2441,7 +2442,9 @@ async function accion(a,el){
       case"sel": el.checked?sel.add(eid):sel.delete(eid); pintar(); return;
       case"selg": {const l=pendEnviar().filter(e=>e.salida_id===sid); const todos=l.every(e=>sel.has(e.id));
         for(const e of l) todos?sel.delete(e.id):sel.add(e.id); pintar(); return}
-      case"generar": {el.disabled=true; const f=await llamar("rp_rel_crear",{ids:[...sel]}); sel.clear(); aviso("Relación "+f+" generada"); return refrescar()}
+      case"generar": {el.disabled=true; const obs=(($("relobs")||{}).value||"").trim();
+        let f; try{f=await llamar("rp_rel_crear",{ids:[...sel],obs})}catch(e){if(/rp_rel_crear/.test(e.message)&&!obs) f=await llamar("rp_rel_crear",{ids:[...sel]}); else throw e}
+        sel.clear(); NT.relobs=""; aviso("Relación "+f+" generada"); return refrescar()}
       case"relcan": if(!confirm("¿Cancelar esta relación? Las facturas regresan a Pendientes de enviar.")) return;
         await llamar("rp_rel_cancelar",{rel:el.dataset.r}); aviso("Relación cancelada"); return refrescar();
       case"unchk": el.checked?unchk.delete(el.dataset.i):unchk.add(el.dataset.i); pintar(); return;
