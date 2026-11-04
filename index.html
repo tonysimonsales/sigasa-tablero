@@ -1782,7 +1782,9 @@ async function cargar(){
   st.tipos=new Set(D.tipo_hab>=0?[D.tipo_hab]:[]); st.provs=new Set();
   await leerSel(); iniciar();
 }
+let diaSel=null;
 async function leerSel(){
+  diaSel=hoyCxp();
   try{const l=await SEL.listar(); sel.clear(); for(const r of l) sel.set(r.id,{imp:+r.imp,quien:r.quien||""})}
   catch(e){console.warn("No se pudo leer la selección:",e.message)}
 }
@@ -1903,7 +1905,17 @@ function conectar(tb,L){
 }
 
 /* ---------- Selección ---------- */
+// Si la página quedó abierta y cambió el día: se borra lo del día anterior (también lo de importe cambiado) y fondos en 0.00
+async function cambioDia(){
+  if(!D||!diaSel||hoyCxp()===diaSel) return false;
+  await leerSel(); LS.p("cxp_fondos",{dia:hoyCxp(),v:0}); if($("xfondos")) $("xfondos").value=MX.format(0);
+  const v=$("velo"); if(v&&v.querySelector(".xres")){v.hidden=true;v.innerHTML=""}
+  pintar(); aviso("Cambió el día: la selección y los fondos se reiniciaron"); return true;
+}
+setInterval(()=>{cambioDia()},60000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden) cambioDia()});
 async function marcar(ds,on){
+  if(await cambioDia()) return;
   ds=ds.filter(Boolean);
   if(on){const nuevos=ds.filter(d=>!sel.has(d.id)&&d.s>0).map(d=>({id:d.id,imp:d.s}));
     nuevos.forEach(r=>sel.set(r.id,{imp:r.imp,quien:"Yo"})); pintar();
@@ -1975,7 +1987,7 @@ function resumen(){
     $("xrtab").tFoot.innerHTML='<tr><td>Total ('+ds.length+" facturas, "+grupos.length+' proveedores)</td><td></td><td></td><td class="n">'+MX.format(tot)+"</td><td></td></tr>";
     $("xrtab").tBodies[0].querySelectorAll("tr[data-id]").forEach(tr=>{const id=+tr.dataset.id, d=porId.get(id);
       const inp=tr.querySelector("input");
-      inp.onchange=async()=>{let v=Math.round(numero(inp.value)*100)/100; if(!(v>0)) v=d.s; if(v>d.s) v=d.s;
+      inp.onchange=async()=>{if(await cambioDia()) return; let v=Math.round(numero(inp.value)*100)/100; if(!(v>0)) v=d.s; if(v>d.s) v=d.s;
         sel.get(id).imp=v; armar(); try{await SEL.poner([{id,imp:v}])}catch(e){aviso("No se guardó el importe: "+e.message)}};
       tr.querySelector(".quitar").onclick=async()=>{sel.delete(id); armar(); try{await SEL.quitar([id])}catch(e){}}});
     // Texto y HTML del correo
