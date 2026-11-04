@@ -1502,7 +1502,7 @@ function aviso(m){const a=$("aviso");a.textContent=m;a.hidden=false;clearTimeout
 
 window.PANEL=window.PANEL||{};
 // La pestaña aparece solo si Supabase ya tiene las funciones (supabase/08_devoluciones.sql)
-window.PANEL.devolucionesIniciar=(fRpc,r)=>{rpc=fRpc; rol=r; cargarLista().then(()=>{$("tabD").hidden=false}).catch(()=>{})};
+window.PANEL.devolucionesIniciar=(fRpc,r)=>{rpc=fRpc; rol=r; if(window.PANEL.permite&&!window.PANEL.permite("devoluciones")) return; cargarLista().then(()=>{$("tabD").hidden=false}).catch(()=>{})};
 window.PANEL.devoluciones=()=>prom||(prom=iniciar());
 
 async function iniciar(){
@@ -2055,7 +2055,7 @@ function aviso(m){const a=$("aviso");a.textContent=m;a.hidden=false;clearTimeout
 
 window.PANEL=window.PANEL||{};
 // La pestaña aparece solo si Supabase ya tiene las funciones (supabase/15_reparto.sql) y el rol puede verla
-window.PANEL.repartoIniciar=(fRpc,r)=>{rpc=fRpc; rol=r;
+window.PANEL.repartoIniciar=(fRpc,r)=>{rpc=fRpc; rol=r; if(window.PANEL.permite&&!window.PANEL.permite("reparto")) return Promise.resolve(false);
   return llamar("rp_catalogos").then(c=>{C=c; $("tabE").hidden=false; if(rol==="cyc"){vista="evid";sub="c"} return cargar().then(()=>true)}).catch(()=>false)};
 window.PANEL.reparto=()=>prom||(prom=Promise.resolve().then(()=>{$("ebusb").onclick=buscarFactura;$("ebus").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();buscarFactura()}};pintar()}));
 

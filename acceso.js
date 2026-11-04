@@ -42,6 +42,10 @@ async function arrancar(){
   const u=document.createElement("div"); u.className="usuario";
   u.innerHTML='<span>'+esc(data.nombre)+'</span><button type="button" class="link" id="asalir">Salir</button>';
   h.appendChild(u); $("asalir").onclick=salir;
+  // Pestañas por usuario (perfiles.pestanas): si está definido, solo esas
+  const PT={visitas:"tabR",ventas:"tabV",cobranza:"tabC",almacen:"tabA",cxp:"tabX",reparto:"tabE",devoluciones:"tabD",uso:"tabU"};
+  const lim=Array.isArray(data.pestanas)&&data.pestanas.length?new Set(data.pestanas):null;
+  window.PANEL.permite=k=>!lim||lim.has(k);
   listo(data);
   registrarUso(data);
   // Pestaña Almacén: admin, supervisores y almacén; el usuario de almacén solo ve esa pestaña
@@ -59,6 +63,10 @@ async function arrancar(){
   if(data.ve_uso){$("tabU").hidden=false; window.PANEL.uso=()=>usoProm||(usoProm=reporteUso())}
   // Cuentas por pagar: solo perfiles con ve_cxp (Tony y ASG)
   if(data.ve_cxp) $("tabX").hidden=false;
+  if(lim){for(const [k,t] of Object.entries(PT)) if(!lim.has(k)) $(t).hidden=true;
+    const prim=["visitas","ventas","cobranza","almacen","cxp","reparto","devoluciones","uso"].find(k=>lim.has(k)&&!$(PT[k]).hidden);
+    if(prim){window.PANEL.inicio=PT[prim]; const sel=Object.values(PT).find(t=>$(t).getAttribute("aria-selected")==="true"); if(!sel||$(sel).hidden) window.PANEL.mostrar(PT[prim])}
+    if(!lim.has("ventas")&&!lim.has("visitas")) $("corte").textContent="";}
 }
 
 /* ---------- Descarga y descompresión de paquetes ---------- */
@@ -66,6 +74,7 @@ const PREF={ventas:"v",cobranza:"c",visitas:"r",almacen:"a",cxp:"p"};
 async function bajar(tipo){
   const p=await perfil, todos=p.rol==="admin"||p.rol==="supervisor"||tipo==="almacen"||tipo==="cxp", t=PREF[tipo]+":todos";
   if((p.rol==="almacen"&&tipo!=="almacen")||p.rol==="chofer"||p.rol==="cyc") return new Promise(()=>{}); // almacén y choferes no cargan ventas/cobranza/visitas
+  if(Array.isArray(p.pestanas)&&p.pestanas.length&&!p.pestanas.includes(tipo)) return new Promise(()=>{}); // pestaña no permitida a este usuario
   let q=sb.from("paquetes").select("clave,contenido").eq("tipo",tipo);
   q=todos?q.eq("clave",t):q.neq("clave",t);
   const {data,error}=await q;
