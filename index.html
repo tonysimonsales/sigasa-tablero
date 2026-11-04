@@ -1774,12 +1774,10 @@ async function cargar(){
   if(!D.docs||!D.docs.length) throw new Error("Todavía no hay cuentas por pagar cargadas.");
   docs=D.docs.map(x=>{const a=atraso(x[6]);return {id:x[0],p:x[1],f:x[2],fp:x[3],c:x[4],fe:x[5],v:x[6],s:x[7],dp:x[8],cond:x[9]||"",a,t:tramo(a)}});
   porId=new Map(docs.map(d=>[d.id,d]));
-  // Filtros: los guardados en este navegador o, la primera vez, los habituales (tipo Ferretería + proveedores del reporte)
+  // Filtros al abrir: siempre tipo Ferretería y todos sus proveedores; del navegador solo se recuerdan vencimiento, vista y saldos viejos
   const g=LS.g("cxp_filtros",null);
-  if(g){const it=new Map(D.tipos.map((n,i)=>[n,i])), ip=new Map(D.provs.map((p,i)=>[p[0],i]));
-    st.tipos=new Set(g.tipos.map(n=>it.get(n)).filter(i=>i!==undefined)); st.provs=new Set(g.provs.map(n=>ip.get(n)).filter(i=>i!==undefined));
-    st.ven=g.ven||"T"; st.vista=g.vista||"V"; st.viejas=g.viejas!==false}
-  else{if(D.tipo_hab>=0) st.tipos=new Set([D.tipo_hab]); st.provs=new Set(D.habituales||[])}
+  if(g){st.ven=g.ven||"T"; st.vista=g.vista||"V"; st.viejas=g.viejas!==false}
+  st.tipos=new Set(D.tipo_hab>=0?[D.tipo_hab]:[]); st.provs=new Set();
   await leerSel(); iniciar();
 }
 async function leerSel(){
