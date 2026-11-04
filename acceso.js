@@ -242,9 +242,14 @@ function detalleUso(u){
 /* ---------- CxP: selección de facturas a pagar, compartida entre los usuarios con ve_cxp ---------- */
 window.PANEL=window.PANEL||{};
 window.PANEL.cxpSel={
-  async listar(){await perfil; const {data,error}=await sb.from("cxp_seleccion").select("docto_cp_id,importe,nombre");
-    if(error) throw new Error(error.message); return data.map(r=>({id:r.docto_cp_id,imp:+r.importe,quien:r.nombre}))},
-  async poner(l){const p=await perfil; const {error}=await sb.from("cxp_seleccion").upsert(l.map(r=>({docto_cp_id:r.id,importe:r.imp,nombre:p.nombre})),{onConflict:"docto_cp_id"});
+  // Solo vale lo marcado hoy: lo de días anteriores se borra al abrir la pestaña
+  async listar(){await perfil; const {data,error}=await sb.from("cxp_seleccion").select("docto_cp_id,importe,nombre,actualizado");
+    if(error) throw new Error(error.message);
+    const h=new Date(); h.setHours(0,0,0,0);
+    const viejas=data.filter(r=>new Date(r.actualizado)<h).map(r=>r.docto_cp_id);
+    if(viejas.length) await sb.from("cxp_seleccion").delete().in("docto_cp_id",viejas);
+    return data.filter(r=>new Date(r.actualizado)>=h).map(r=>({id:r.docto_cp_id,imp:+r.importe,quien:r.nombre}))},
+  async poner(l){const p=await perfil, ahora=new Date().toISOString(); const {error}=await sb.from("cxp_seleccion").upsert(l.map(r=>({docto_cp_id:r.id,importe:r.imp,nombre:p.nombre,actualizado:ahora})),{onConflict:"docto_cp_id"});
     if(error) throw new Error(error.message)},
   async quitar(ids){const {error}=await sb.from("cxp_seleccion").delete().in("docto_cp_id",ids); if(error) throw new Error(error.message)}
 };

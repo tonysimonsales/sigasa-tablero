@@ -1762,9 +1762,11 @@ const sel=new Map(); // id → {imp, quien}
 /* ---------- Guardado local (filtros, fondos y, sin Supabase, la selección) ---------- */
 const LS={g(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},
   p(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+// La selección y los fondos solo valen el día en que se marcan (al día siguiente arranca vacía y en 0.00)
+const hoyCxp=()=>(d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"))(new Date());
 const SEL=window.PANEL&&window.PANEL.cxpSel||{ // respaldo en el navegador
-  async listar(){return LS.g("cxp_sel",[])},
-  async poner(l){const m=new Map((LS.g("cxp_sel",[])).map(r=>[r.id,r]));for(const r of l)m.set(r.id,{id:r.id,imp:r.imp,quien:"Yo"});LS.p("cxp_sel",[...m.values()])},
+  async listar(){const l=LS.g("cxp_sel",[]), h=l.filter(r=>r.dia===hoyCxp()); if(h.length!==l.length) LS.p("cxp_sel",h); return h},
+  async poner(l){const m=new Map((LS.g("cxp_sel",[])).filter(r=>r.dia===hoyCxp()).map(r=>[r.id,r]));for(const r of l)m.set(r.id,{id:r.id,imp:r.imp,quien:"Yo",dia:hoyCxp()});LS.p("cxp_sel",[...m.values()])},
   async quitar(ids){const s=new Set(ids);LS.p("cxp_sel",LS.g("cxp_sel",[]).filter(r=>!s.has(r.id)))}};
 const guardarFiltros=()=>LS.p("cxp_filtros",{tipos:[...st.tipos].map(i=>D.tipos[i]),provs:[...st.provs].map(i=>D.provs[i][0]),ven:st.ven,vista:st.vista,viejas:st.viejas});
 
@@ -1799,8 +1801,9 @@ function iniciar(){
   $("xviejas").checked=st.viejas; $("xviejas").onchange=e=>{st.viejas=e.target.checked;guardarFiltros();pintar()};
   $("xtipo").onclick=()=>selector("tipos"); $("xprov").onclick=()=>selector("provs");
   $("xtodas").onclick=()=>marcar(visibles(),true); $("xninguna").onclick=()=>marcar([...sel.keys()].map(id=>porId.get(id)||{id}),false);
-  $("xfondos").value=LS.g("cxp_fondos","")?MX.format(LS.g("cxp_fondos",0)):"";
-  $("xfondos").oninput=()=>{LS.p("cxp_fondos",numero($("xfondos").value));pintarPago()};
+  const fo=LS.g("cxp_fondos",null), fv=fo&&fo.dia===hoyCxp()?+fo.v||0:0;
+  $("xfondos").value=MX.format(fv);
+  $("xfondos").oninput=()=>{LS.p("cxp_fondos",{dia:hoyCxp(),v:numero($("xfondos").value)});pintarPago()};
   $("xfondos").onblur=()=>{const v=numero($("xfondos").value);$("xfondos").value=v?MX.format(v):""};
   $("xresumir").onclick=resumen;
   $("xpago").hidden=false;
