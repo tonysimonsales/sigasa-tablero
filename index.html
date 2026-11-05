@@ -195,6 +195,7 @@ tfoot td:first-child{background:var(--surface-2)}
 .rev .sub{display:block;color:var(--ink-3);font-size:.78rem}
 .rbar{position:sticky;bottom:0;z-index:2;display:flex;flex-wrap:wrap;gap:8px;align-items:center;box-shadow:0 -4px 12px rgba(0,0,0,.08)}
 .rbar .busq{flex:1 1 200px}
+.rbar2{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0}.rbar2 .busq{flex:1 1 200px}
 .robs{font-size:.86rem;background:var(--surface-2);border-left:3px solid var(--s1);padding:4px 8px;border-radius:4px}
 .rx{flex:none;width:30px;height:30px;min-height:0;padding:0;border-radius:50%;border:1px solid var(--bad);background:var(--surface);color:var(--bad);font-size:.8rem;cursor:pointer;line-height:1}
 .rx:hover{background:var(--bad);color:#fff}
@@ -2041,7 +2042,7 @@ const fD=s=>{if(!s)return"—";const d=new Date(s.length<=10?s+"T12:00:00":s);re
 const fH=s=>{if(!s)return"";const d=new Date(s);return fD(s)+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
 const dias=s=>s?Math.max(0,Math.round((new Date(HOY()+"T12:00:00")-new Date((s.length<=10?s+"T12:00:00":s)))/864e5)):0;
 const pago=e=>e.contado===true?'<span class="rtag c">Contado</span>':e.contado===false?'<span class="rtag">Crédito</span>':"";
-let rpc=null, rol="", C=null, SAL=[], ENT=[], PR=[], REL=null, vista="salidas", sub="p", recib=null, prom=null;
+let rpc=null, rol="", C=null, SAL=[], ENT=[], PR=[], REL=null, CP=null, vista="salidas", sub="p", recib=null, prom=null;
 const unchk=new Set(), NT={}; // partidas de una relación desmarcadas (no llegaron) y textos escritos
 const N={abierta:false,fecha:"",veh:"",cho:"",items:[],via:""};
 const borr=new Map(); // borradores de la recepción (no entregada sin motivo)
@@ -2064,8 +2065,9 @@ async function cargar(){
   let c2; [SAL,ENT,c2,REL]=await Promise.all([llamar("rp_salidas_lista",{desde}),llamar("rp_entregas_lista",{desde}),llamar("rp_catalogos").catch(()=>null),
     llamar("rp_rel_lista",{desde:iso(new Date(Date.now()-30*864e5))}).catch(()=>null)]);
   if(REL) REL=REL.map(r=>Object.assign(r,{items:r.items||[]})).filter(r=>r.items.length);
+  try{CP=await llamar("rp_carteras_pend")}catch(e){CP=null}
   if(c2) C=c2; window.RP_ACT=C&&C.actualizado||null; if(window.ponerCorte) window.ponerCorte();
-  const pend=rol==="cyc"?relsPend("cyc").length:SAL.filter(s=>s.estado==="en_ruta").length+sinDecision().length+relsPend("archivo").length;
+  const pend=rol==="cyc"?relsPend("cyc").length+(CP||[]).length+relsPendCart(true).length:misCart().length?relsPendCart(true).length:SAL.filter(s=>s.estado==="en_ruta").length+sinDecision().length+relsPend("archivo").length;
   const b=$("ebadge"); b.textContent=pend; b.hidden=!pend;
 }
 const salida=id=>SAL.find(s=>s.id===id);
@@ -2247,12 +2249,15 @@ function vNoEnt(){
 /* ---------- Evidencias ---------- */
 function docCyc(e){return e.contado===true?(e.pagada===false?'Copia 2 · <b class="rojo">NO PAGADA</b>'+(e.comentario?" (“"+esc(e.comentario)+"”)":""):"Copia 2 + pago"):e.contado===false?"Original firmada + copia 2":"Original firmada + copia 2 (crédito) o copia 2 + pago (contado)"}
 function vEvid(){
-  const subs=rol==="cyc"?[["c","Crédito y Cobranza"]]:[["p","Pendientes de enviar"],["c","Crédito y Cobranza"],["r","Archivo almacén"]];
+  const verK=CP!==null&&(rol==="cyc"||editor()||rol==="supervisor"||rol==="admin"||misCart().length>0);
+  const soloCart=rol!=="cyc"&&!editor()&&rol==="supervisor"&&misCart().length>0;
+  let subs=rol==="cyc"?[["c","Crédito y Cobranza"]]:[["p","Pendientes de enviar"],["c","Crédito y Cobranza"],["r","Archivo almacén"]];
+  if(verK) subs=soloCart?[["k","Carteras"]]:subs.concat([["k","Carteras"]]);
   if(!subs.some(x=>x[0]===sub)) sub=subs[0][0];
   if(!REL) return '<section class="panel"><div class="vacio">Falta activar las relaciones de evidencias (supabase/19_reparto_relaciones.sql).</div></section>';
-  const cnt={p:pendEnviar().length,c:relsPend("cyc").length,r:relsPend("archivo").length};
+  const cnt={p:pendEnviar().length,c:relsPend("cyc").length,r:relsPend("archivo").length,k:(CP||[]).length+relsPendCart().length};
   const cab=(subs.length>1?'<div class="seg" role="group" aria-label="Evidencias" id="esub">'+subs.map(([k,n])=>'<button type="button" data-a="sub" data-k="'+k+'" aria-pressed="'+(sub===k)+'">'+n+(cnt[k]?" ("+cnt[k]+")":"")+"</button>").join("")+"</div>":"");
-  return cab+(sub==="p"?vPendEnviar():vDestino(sub==="c"?"cyc":"archivo"));
+  return cab+(sub==="p"?vPendEnviar():sub==="k"?vCarteras():vDestino(sub==="c"?"cyc":"archivo"));
 }
 const DN={cyc:"Crédito",archivo:"Archivo"};
 function vPendEnviar(){
@@ -2268,7 +2273,7 @@ function vPendEnviar(){
       nf.map(x=>' · <b class="rojo">'+(x.d==="cyc"?"Crédito":"El archivo")+" no la recibió en "+esc(x.rel)+': "'+esc(x.nota)+'"</b>').join("")+"</span>"+
       '<span class="rchips">'+chip(e,"cyc")+chip(e,"archivo")+"</span></span></label>"};
   const tot=l.filter(e=>sel.has(e.id)).reduce((a,e)=>a+(+e.total||0),0);
-  const env=REL.filter(r=>dias(r.creado)<=30);
+  const env=REL.filter(r=>r.nivel!=="cartera"&&dias(r.creado)<=30);
   return '<section class="panel"><div class="ghead"><h2>Pendientes de enviar ('+l.length+")</h2></div>"+
     (l.length?'<div class="sub2" style="margin-bottom:8px">Selecciona las facturas y genera la relación. Se envía a Crédito y Cobranza y al Archivo del almacén; cada uno confirma lo suyo.</div>'+
       gs.map(([sid,es])=>{const s=salida(sid);return '<div class="rgrupo"><div class="rgh"><b>'+fD(s.fecha)+" · "+esc(s.vehiculo)+" · "+esc(s.chofer)+"</b>"+
@@ -2338,6 +2343,11 @@ function historial(h){
   const f=h.factura, es=(h.entregas||[]).filter(e=>e.s_estado!=="cancelada"), its=h.items||[];
   if(!f&&!es.length) return '<div class="rhist"><div class="estado mal">No encontré el folio '+esc(h.folio)+'</div><div class="sub2">No está en las facturas de los últimos 120 días ni en ninguna salida.</div></div>';
   const u=es[es.length-1];
+  const evdCart=e=>{const ok=its.filter(i=>i.destino==="cartera"&&i.estado==="recibida").pop(), p=its.find(i=>i.destino==="cartera"&&i.estado==="pendiente");
+    const c=(f&&f.cartera)||(ok&&ok.cartera)||(p&&p.cartera)||"";
+    if(e.ev_cart_fecha) return '<span class="rchip ok">Cartera '+esc(e.ev_cartera||c)+": recibida"+(ok?" en "+ok.rel+" por "+esc(ok.confirmado_por):"")+"</span>";
+    if(p) return '<span class="rchip env">Cartera '+esc(p.cartera||c)+": enviada en "+p.rel+", por confirmar</span>";
+    return '<span class="rchip pen">Cartera '+esc(c)+": pendiente de enviar</span>"};
   const evd=(d,e)=>{const ok=its.filter(i=>i.destino===d&&i.estado==="recibida").pop(), p=its.find(i=>i.destino===d&&i.estado==="pendiente"), fa=its.filter(i=>i.destino===d&&i.estado==="faltante").pop();
     const n=d==="cyc"?"Crédito y Cobranza":"Archivo almacén";
     if((d==="cyc"?e.ev_cyc_fecha:e.ev_arch_fecha)) return '<span class="rchip ok">'+n+": recibida"+(ok?" en "+ok.rel+" por "+esc(ok.confirmado_por):" por "+esc(d==="cyc"?e.ev_cyc_por:e.ev_arch_por))+(d==="archivo"&&e.ev_arch_ubic?" · "+esc(e.ev_arch_ubic):"")+"</span>";
@@ -2356,7 +2366,7 @@ function historial(h){
     else{est="No entregada, sin decisión";cls="mal";extra="Motivo: "+esc(u.motivo)+(u.comentario?' · "'+esc(u.comentario)+'"':"")+". Falta reprogramar o cancelar."}}
   else{est=(u.resultado==="parcial"?"Entregada parcial":"Entregada");cls="ok";
     extra="El "+fD(u.s_fecha)+" en "+esc(u.s_vehiculo)+" con "+esc(u.s_chofer)+(u.contado&&u.pagada===false?' · <b class="rojo">contado NO pagada</b>':"")+(u.trae_evidencia===false?' · <b class="rojo">el chofer no trajo evidencia</b>':"")+
-      '<div class="rchips">'+evd("cyc",u)+evd("archivo",u)+"</div>"}
+      '<div class="rchips">'+evd("cyc",u)+evd("archivo",u)+(u.ev_cyc_fecha?evdCart(u):"")+"</div>"}
   // Línea de tiempo
   const ev=[];
   if(f) ev.push([f.fecha+"T00:00","Facturada · "+esc(f.via||"")]);
@@ -2365,17 +2375,54 @@ function historial(h){
     if(e.registrado_fecha) ev.push([e.registrado_fecha,(e.resultado==="no_entregada"?"No entregada: "+esc(e.motivo):e.resultado==="parcial"?"Entregada parcial":"Entregada")+(e.contado&&e.resultado!=="no_entregada"?(e.pagada===false?" · no pagada":" · pagada"):"")+(e.comentario?' · "'+esc(e.comentario)+'"':"")+" · recibió "+esc(e.registrado_por||"")]);
     if(e.decision_fecha) ev.push([e.decision_fecha,(e.decision==="reprogramar"?"Reprogramada al "+fD(e.fecha_reprog):"Entrega cancelada")+" · "+esc(e.decision_por||"")]);
   });
-  for(const i of its){const n=i.destino==="cyc"?"Crédito":"Archivo";
+  for(const i of its){const n=i.destino==="cyc"?"Crédito":i.destino==="cartera"?"la cartera "+(i.cartera||""):"Archivo";
     ev.push([i.rel_creado,"Enviada a "+n+" en "+i.rel+" · "+esc(i.rel_creado_por||"")+(i.rel_obs?' · “'+esc(i.rel_obs)+'”':"")]);
     if(i.confirmado_fecha) ev.push([i.confirmado_fecha,(i.estado==="recibida"?n+" la recibió":n+' no la recibió: "'+esc(i.nota||"")+'"')+(i.ubicacion?" · "+esc(i.ubicacion):"")+" · "+esc(i.confirmado_por||"")])}
   for(const b of h.bitacora||[]) ev.push([b.fecha,'<span class="rojo">✕ '+(b.editor?"Corrección de ":"")+esc(b.quien||"")+": "+esc(b.accion)+(b.detalle?" ("+esc(b.detalle)+")":"")+(b.motivo?' · "'+esc(b.motivo)+'"':"")+"</span>"]);
   ev.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
   const base=f||u;
-  return '<div class="rhist"><div><b>'+esc(h.folio)+"</b> · "+esc(base.cliente||"")+" "+pago(base)+'<div class="sub2">'+(f?"Facturada el "+fD(f.fecha)+" · ":"")+din(base.total)+(f&&f.vendedor?" · "+esc(f.vendedor):"")+"</div></div>"+
+  return '<div class="rhist"><div><b>'+esc(h.folio)+"</b> · "+esc(base.cliente||"")+" "+pago(base)+'<div class="sub2">'+(f?"Facturada el "+fD(f.fecha)+" · ":"")+din(base.total)+(f&&f.vendedor?" · "+esc(f.vendedor):"")+(f&&f.cobrador?" · cobrador "+esc(f.cobrador)+" (cartera "+esc(f.cartera||"")+")":"")+"</div></div>"+
     '<div class="estado '+cls+'">'+est+'</div><div class="sub2">'+extra+"</div>"+
     '<ul class="rtl">'+ev.map(([t,x])=>"<li><span>"+(String(t).length>10&&!String(t).endsWith("T00:00")?fH(t):fD(String(t).slice(0,10)))+"</span><span>"+x+"</span></li>").join("")+"</ul></div>";
 }
 
+
+/* ---------- Carteras: Crédito reparte a cada responsable ---------- */
+const misCart=()=>(C&&C.mis_carteras)||[];
+function relsPendCart(mias){return (REL||[]).filter(r=>r.nivel==="cartera"&&r.items.some(i=>i.destino==="cartera"&&i.estado==="pendiente")&&(!mias||misCart().includes(r.cartera)))}
+function vCarteras(){
+  const puedeEnv=rol==="cyc"||editor()||misCart().length>0;
+  const orden=((C&&C.carteras)||[]).slice().sort((a,b)=>a.localeCompare(b,"es"));
+  for(const c of new Set((CP||[]).map(x=>x.cartera))) if(!orden.includes(c)) orden.push(c);
+  const grupo=c=>{const l=(CP||[]).filter(x=>x.cartera===c); if(!l.length) return "";
+    const ns=l.filter(x=>sel.has(x.id)).length, tot=l.filter(x=>sel.has(x.id)).reduce((a,x)=>a+(+x.total||0),0);
+    return '<div class="rgrupo"><div class="rgh"><b>'+esc(c)+" ("+l.length+")</b>"+(puedeEnv?' <button type="button" class="link" data-a="selk" data-k="'+esc(c)+'">Seleccionar '+l.length+"</button>":"")+"</div>"+
+      l.map(x=>'<label class="rev'+(sel.has(x.id)?" on":"")+'">'+(puedeEnv?'<input type="checkbox" data-a="sel" data-e="'+x.id+'"'+(sel.has(x.id)?" checked":"")+">":"<span></span>")+
+        "<span><b>"+esc(x.folio)+"</b> · "+esc(x.cliente||"")+" "+pago(x)+'<span class="sub">'+esc(x.cobrador)+" · "+din(x.total)+" · Crédito la recibió "+fH(x.ev_cyc_fecha)+(x.ev_cyc_por?" ("+esc(x.ev_cyc_por)+")":"")+
+        (x.falto?' · <b class="rojo">'+esc(c)+" no la recibió en "+esc(x.falto.rel)+': "'+esc(x.falto.nota||"")+'"</b>':"")+"</span></span></label>").join("")+
+      (puedeEnv?'<div class="rbar2"><span><b>'+ns+"</b> seleccionadas"+(ns?" · "+din(tot):"")+'</span><button type="button" class="prim" data-a="genk" data-k="'+esc(c)+'"'+(ns?"":" disabled")+">Enviar a "+esc(c)+" ("+ns+")</button>"+
+        '<input type="text" id="kobs_'+c.replace(/[^A-Za-z0-9]/g,"_")+'" class="busq" maxlength="300" placeholder="Observaciones (opcional)"></div>':"")+"</div>"};
+  const pendG=orden.map(grupo).join("");
+  const recib=relsPendCart(!editor());
+  const card=r=>{const it=r.items.filter(i=>i.destino==="cartera"&&i.estado==="pendiente"), ok=it.filter(i=>!unchk.has(i.id)).length, puede=editor()||misCart().includes(r.cartera);
+    return '<div class="rcard rrel"><div class="top"><span><span class="rfolio">'+esc(r.folio)+"</span> · "+it.length+(it.length>1?" facturas":" factura")+" · cartera "+esc(r.cartera)+'</span><span class="rest env">Por confirmar</span></div>'+
+      (r.observaciones?'<div class="robs">Observaciones: “'+esc(r.observaciones)+'”</div>':"")+'<div class="sub2">Envió '+esc(r.creado_por||"")+" "+fH(r.creado)+"."+(puede?" Desmarca las que no vengan en el paquete.":"")+"</div>"+
+      it.map(i=>'<label class="rrow'+(unchk.has(i.id)?" no":"")+'">'+(puede?'<input type="checkbox" data-a="unchk" data-i="'+i.id+'"'+(unchk.has(i.id)?"":" checked")+">":"<span></span>")+
+        "<span><b>"+esc(i.folio)+"</b> · "+esc(i.cliente||"")+" "+pago(i)+'<span class="sub">'+esc(i.cobrador||"")+" · "+din(i.total)+(unchk.has(i.id)?' · <b class="rojo">no la recibí</b>':"")+"</span></span></label>").join("")+
+      (puede?(ok<it.length?'<input type="text" class="busq" id="rn_'+r.id+'" placeholder="¿Qué faltó? (obligatorio)" style="width:100%">':"")+
+        '<div class="acc"><button type="button" class="prim" data-a="relconf" data-r="'+r.id+'" data-d="cartera">Confirmar recepción ('+ok+" de "+it.length+")</button></div>":"")+"</div>"};
+  const env=(REL||[]).filter(r=>r.nivel==="cartera"&&dias(r.creado)<=30);
+  const cardE=r=>{const it=r.items, pend=it.filter(i=>i.estado==="pendiente").length, rec=it.filter(i=>i.estado==="recibida").length, c=it.find(i=>i.confirmado_fecha), sinConf=!it.some(i=>i.estado!=="pendiente");
+    return '<div class="rcard"><div class="top"><span><span class="rfolio">'+esc(r.folio)+"</span> · "+it.length+(it.length>1?" facturas":" factura")+" → "+esc(r.cartera)+'</span><span class="rtop"><span class="sub2">'+esc(r.creado_por||"")+" "+fH(r.creado)+"</span>"+
+      (editor()||(sinConf&&puedeEnv)?X("xrel",'data-r="'+r.id+'"',"Eliminar envío"):"")+"</span></div>"+(r.observaciones?'<div class="robs">Observaciones: “'+esc(r.observaciones)+'”</div>':"")+
+      '<div class="sub2">'+(pend?'<span class="rest env">Por confirmar</span>':"<b>"+rec+" de "+it.length+"</b> recibidas"+(it.length-rec?' <span class="rest fal">'+(it.length-rec)+" faltante"+(it.length-rec>1?"s":"")+"</span>":"")+" · confirmó "+esc(c.confirmado_por)+" "+fH(c.confirmado_fecha))+"</div>"+
+      (editor()?it.map(i=>'<div class="rxrow"><span><b>'+esc(i.folio)+"</b> · "+esc(i.cliente||"")+'<span class="sub">'+(i.estado==="pendiente"?"por confirmar":i.estado==="recibida"?"recibida":"faltó")+"</span></span>"+X("xrelf",'data-r="'+r.id+'" data-e="'+i.entrega_id+'"',"Quitar del envío")+"</div>").join("")+
+        (!sinConf?'<div class="acc"><button type="button" class="rxb" data-a="xconf" data-r="'+r.id+'" data-d="cartera">Deshacer confirmación</button></div>':""):"")+"</div>"};
+  return '<section class="panel"><div class="ghead"><h2>Por entregar a carteras ('+(CP||[]).length+")</h2></div>"+
+      (pendG||'<div class="vacio">No hay facturas por entregar a carteras.</div>')+'<p class="aviso">Facturas que Crédito y Cobranza ya recibió, separadas por la cartera del cobrador del cliente.</p></section>'+
+    '<section class="panel"><div class="ghead"><h2>Por recibir'+(editor()?"":" (mi cartera)")+" ("+recib.length+")</h2></div>"+(recib.length?'<div class="rlista">'+recib.map(card).join("")+"</div>":'<div class="vacio">Nada por recibir.</div>')+"</section>"+
+    '<section class="panel"><div class="ghead"><h2>Envíos a carteras (30 días)</h2></div>'+(env.length?'<div class="rlista">'+env.map(cardE).join("")+"</div>":'<div class="vacio">Ninguno todavía.</div>')+"</section>";
+}
 /* ---------- Correcciones (✕) con motivo y bitácora ---------- */
 function pedirMotivo(tit,txt,btn){return new Promise(res=>{
   const velo=$("velo");
@@ -2406,7 +2453,7 @@ async function correccion(a,el){
     txt="Las facturas regresan a Pendientes de enviar"+(r.items.some(i=>i.estado!=="pendiente")?" y se quitan las confirmaciones que ya tenía":"")+"."; fn="rp_x_relacion"; args={rel:rid}}
   else if(a==="xrelf"){const i0=r.items.find(i=>i.entrega_id===eid); tit="Quitar "+i0.folio+" de "+r.folio; btn="Quitar";
     txt="La factura regresa a Pendientes de enviar"+(r.items.some(i=>i.entrega_id===eid&&i.estado==="recibida")?" y se quita la confirmación que tenía":"")+"."; fn="rp_x_rel_factura"; args={rel:rid,ent:eid}}
-  else {tit="Deshacer confirmación de "+(d==="cyc"?"Crédito y Cobranza":"Archivo almacén")+" en "+r.folio; btn="Deshacer";
+  else {tit="Deshacer confirmación de "+(d==="cyc"?"Crédito y Cobranza":d==="cartera"?"la cartera "+(r.cartera||""):"Archivo almacén")+" en "+r.folio; btn="Deshacer";
     txt="La relación vuelve a quedar por confirmar para "+(d==="cyc"?"Crédito y Cobranza":"el Archivo")+"."; fn="rp_x_confirmacion"; args={rel:rid,dest:d}}
   const mot=await pedirMotivo(tit,txt,btn); if(mot===null) return;
   try{await llamar(fn,Object.assign(args,{mot})); aviso("Listo: "+tit.toLowerCase())}catch(err){aviso(err.message)}
@@ -2422,7 +2469,7 @@ function enlazar(){
   });
   const nf=$("nfol"); if(nf) nf.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();agregarFolio(nf.value)}};
   const nv=$("nvia"); if(nv) nv.onchange=()=>{guardarForm();N.via=nv.value;pintar()};
-  box.querySelectorAll('[id^="rn_"],[id^="ru_"],#relobs').forEach(x=>{if(NT[x.id]!=null) x.value=NT[x.id]; x.oninput=()=>{NT[x.id]=x.value}});
+  box.querySelectorAll('[id^="rn_"],[id^="ru_"],[id^="kobs_"],#relobs').forEach(x=>{if(NT[x.id]!=null) x.value=NT[x.id]; x.oninput=()=>{NT[x.id]=x.value}});
 }
 async function accion(a,el){
   const sid=el.dataset.s, eid=el.dataset.e;
@@ -2459,6 +2506,10 @@ async function accion(a,el){
         await llamar("rp_decidir",{ent:eid,d:{decision:"cancelar",comentario:m}}); aviso("Entrega cancelada"); return refrescar()}
       case"sub": sub=el.dataset.k; sel.clear(); unchk.clear(); pintar(); return;
       case"sel": el.checked?sel.add(eid):sel.delete(eid); pintar(); return;
+      case"selk": {const l=(CP||[]).filter(x=>x.cartera===el.dataset.k); const todos=l.every(x=>sel.has(x.id));
+        for(const x of l) todos?sel.delete(x.id):sel.add(x.id); pintar(); return}
+      case"genk": {const c=el.dataset.k, ids=(CP||[]).filter(x=>x.cartera===c&&sel.has(x.id)).map(x=>x.id), o=$("kobs_"+c.replace(/[^A-Za-z0-9]/g,"_"));
+        el.disabled=true; const f=await llamar("rp_cart_crear",{ids,cart:c,obs:o?o.value.trim():""}); ids.forEach(i=>sel.delete(i)); aviso("Envío "+f+" a "+c+" generado"); return refrescar()}
       case"selg": {const l=pendEnviar().filter(e=>e.salida_id===sid); const todos=l.every(e=>sel.has(e.id));
         for(const e of l) todos?sel.delete(e.id):sel.add(e.id); pintar(); return}
       case"generar": {el.disabled=true; const obs=(($("relobs")||{}).value||"").trim();
