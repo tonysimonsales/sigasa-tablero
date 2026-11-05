@@ -2309,12 +2309,13 @@ function vDestino(d){
       (r.observaciones?'<div class="robs">Observaciones: “'+esc(r.observaciones)+'”</div>':"")+'<div class="sub2">Envió '+esc(r.creado_por||"")+" "+fH(r.creado)+"."+(puede?" Desmarca las que no vengan en el paquete.":" Esperando a que "+(d==="cyc"?"Crédito y Cobranza":"el archivo del almacén")+" confirme.")+"</div>"+
       it.map(i=>'<label class="rrow'+(unchk.has(i.id)?" no":"")+'">'+(puede?'<input type="checkbox" data-a="unchk" data-i="'+i.id+'"'+(unchk.has(i.id)?"":" checked")+">":"<span></span>")+
         "<span><b>"+esc(i.folio)+"</b> · "+esc(i.cliente||"")+" "+(d==="cyc"?pago(i):"")+'<span class="sub">'+doc(i)+" · "+din(i.total)+" · "+esc(fD(i.salida.slice(0,10))+i.salida.slice(10))+(unchk.has(i.id)?' · <b class="rojo">no la recibí</b>':"")+"</span></span></label>").join("")+
-      (puede?(ok<it.length?'<input type="text" class="busq" id="rn_'+r.id+'" placeholder="¿Qué faltó? (obligatorio)" style="width:100%">':"")+
+      (puede?'<input type="text" class="busq" id="rn_'+r.id+'" placeholder="'+(ok<it.length?"¿Qué faltó? (obligatorio)":"Anotaciones (opcional)")+'" style="width:100%">'+
         (d==="archivo"?'<input type="text" class="busq" id="ru_'+r.id+'" placeholder="Ubicación del archivo (ej. Caja nov-2026 #1)" style="width:100%">':"")+
         '<div class="acc"><button type="button" class="prim" data-a="relconf" data-r="'+r.id+'" data-d="'+d+'">'+(d==="cyc"?"Confirmar recepción":"Confirmar archivo")+" ("+ok+" de "+it.length+")</button></div>":"")+"</div>"};
   const cardC=r=>{const x=resDest(r,d), fal=r.items.filter(i=>i.destino===d&&i.estado==="faltante");
     return '<div class="rcard"><div class="top"><span><span class="rfolio">'+esc(r.folio)+"</span> · "+x.rec+" de "+x.n+" recibidas"+(x.ubic?" · "+esc(x.ubic):"")+"</span>"+(x.fal?'<span class="rest fal">'+x.fal+(x.fal>1?" faltantes":" faltante")+"</span>":'<span class="rest ok">Completa</span>')+"</div>"+
-      '<div class="sub2">Confirmó '+esc(x.c.confirmado_por)+" "+fH(x.c.confirmado_fecha)+(fal.length?" · faltó: "+fal.map(i=>esc(i.folio)).join(", ")+(fal[0].nota?' — "'+esc(fal[0].nota)+'"':""):"")+"</div>"+
+      '<div class="sub2">Confirmó '+esc(x.c.confirmado_por)+" "+fH(x.c.confirmado_fecha)+(fal.length?" · faltó: "+fal.map(i=>esc(i.folio)).join(", "):"")+"</div>"+
+      ((fal[0]||x.c).nota?'<div class="robs">Anotación: “'+esc((fal[0]||x.c).nota)+'”</div>':"")+
       (editor()?'<div class="acc"><button type="button" class="rxb" data-a="xconf" data-r="'+r.id+'" data-d="'+d+'">Deshacer confirmación</button></div>':"")+"</div>"};
   return '<section class="panel"><div class="ghead"><h2>'+(d==="cyc"?"Relaciones por recibir":"Relaciones por archivar")+" ("+pend.length+")</h2></div>"+(pend.length?'<div class="rlista">'+pend.map(card).join("")+"</div>":'<div class="vacio">No hay relaciones por confirmar.</div>')+"</section>"+
     '<section class="panel"><div class="ghead"><h2>'+(d==="cyc"?"Recibidas":"Archivadas")+" (30 días)</h2></div>"+(conf.length?'<div class="rlista">'+conf.map(cardC).join("")+"</div>":'<div class="vacio">Ninguna todavía.</div>')+"</section>";
@@ -2377,7 +2378,7 @@ function historial(h){
   });
   for(const i of its){const n=i.destino==="cyc"?"Crédito":i.destino==="cartera"?"la cartera "+(i.cartera||""):"Archivo";
     ev.push([i.rel_creado,"Enviada a "+n+" en "+i.rel+" · "+esc(i.rel_creado_por||"")+(i.rel_obs?' · “'+esc(i.rel_obs)+'”':"")]);
-    if(i.confirmado_fecha) ev.push([i.confirmado_fecha,(i.estado==="recibida"?n+" la recibió":n+' no la recibió: "'+esc(i.nota||"")+'"')+(i.ubicacion?" · "+esc(i.ubicacion):"")+" · "+esc(i.confirmado_por||"")])}
+    if(i.confirmado_fecha) ev.push([i.confirmado_fecha,(i.estado==="recibida"?n+" la recibió"+(i.nota?' · “'+esc(i.nota)+'”':""):n+' no la recibió: "'+esc(i.nota||"")+'"')+(i.ubicacion?" · "+esc(i.ubicacion):"")+" · "+esc(i.confirmado_por||"")])}
   for(const b of h.bitacora||[]) ev.push([b.fecha,'<span class="rojo">✕ '+(b.editor?"Corrección de ":"")+esc(b.quien||"")+": "+esc(b.accion)+(b.detalle?" ("+esc(b.detalle)+")":"")+(b.motivo?' · "'+esc(b.motivo)+'"':"")+"</span>"]);
   ev.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
   const base=f||u;
@@ -2409,13 +2410,14 @@ function vCarteras(){
       (r.observaciones?'<div class="robs">Observaciones: “'+esc(r.observaciones)+'”</div>':"")+'<div class="sub2">Envió '+esc(r.creado_por||"")+" "+fH(r.creado)+"."+(puede?" Desmarca las que no vengan en el paquete.":"")+"</div>"+
       it.map(i=>'<label class="rrow'+(unchk.has(i.id)?" no":"")+'">'+(puede?'<input type="checkbox" data-a="unchk" data-i="'+i.id+'"'+(unchk.has(i.id)?"":" checked")+">":"<span></span>")+
         "<span><b>"+esc(i.folio)+"</b> · "+esc(i.cliente||"")+" "+pago(i)+'<span class="sub">'+esc(i.cobrador||"")+" · "+din(i.total)+(unchk.has(i.id)?' · <b class="rojo">no la recibí</b>':"")+"</span></span></label>").join("")+
-      (puede?(ok<it.length?'<input type="text" class="busq" id="rn_'+r.id+'" placeholder="¿Qué faltó? (obligatorio)" style="width:100%">':"")+
+      (puede?'<input type="text" class="busq" id="rn_'+r.id+'" placeholder="'+(ok<it.length?"¿Qué faltó? (obligatorio)":"Anotaciones (opcional)")+'" style="width:100%">'+
         '<div class="acc"><button type="button" class="prim" data-a="relconf" data-r="'+r.id+'" data-d="cartera">Confirmar recepción ('+ok+" de "+it.length+")</button></div>":"")+"</div>"};
   const env=(REL||[]).filter(r=>r.nivel==="cartera"&&dias(r.creado)<=30);
   const cardE=r=>{const it=r.items, pend=it.filter(i=>i.estado==="pendiente").length, rec=it.filter(i=>i.estado==="recibida").length, c=it.find(i=>i.confirmado_fecha), sinConf=!it.some(i=>i.estado!=="pendiente");
     return '<div class="rcard"><div class="top"><span><span class="rfolio">'+esc(r.folio)+"</span> · "+it.length+(it.length>1?" facturas":" factura")+" → "+esc(r.cartera)+'</span><span class="rtop"><span class="sub2">'+esc(r.creado_por||"")+" "+fH(r.creado)+"</span>"+
       (editor()||(sinConf&&puedeEnv)?X("xrel",'data-r="'+r.id+'"',"Eliminar envío"):"")+"</span></div>"+(r.observaciones?'<div class="robs">Observaciones: “'+esc(r.observaciones)+'”</div>':"")+
       '<div class="sub2">'+(pend?'<span class="rest env">Por confirmar</span>':"<b>"+rec+" de "+it.length+"</b> recibidas"+(it.length-rec?' <span class="rest fal">'+(it.length-rec)+" faltante"+(it.length-rec>1?"s":"")+"</span>":"")+" · confirmó "+esc(c.confirmado_por)+" "+fH(c.confirmado_fecha))+"</div>"+
+      (!pend&&c&&c.nota?'<div class="robs">Anotación: “'+esc(c.nota)+'”</div>':"")+
       (editor()?it.map(i=>'<div class="rxrow"><span><b>'+esc(i.folio)+"</b> · "+esc(i.cliente||"")+'<span class="sub">'+(i.estado==="pendiente"?"por confirmar":i.estado==="recibida"?"recibida":"faltó")+"</span></span>"+X("xrelf",'data-r="'+r.id+'" data-e="'+i.entrega_id+'"',"Quitar del envío")+"</div>").join("")+
         (!sinConf?'<div class="acc"><button type="button" class="rxb" data-a="xconf" data-r="'+r.id+'" data-d="cartera">Deshacer confirmación</button></div>':""):"")+"</div>"};
   return '<section class="panel"><div class="ghead"><h2>Por entregar a carteras ('+(CP||[]).length+")</h2></div>"+
