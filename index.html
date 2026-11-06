@@ -2348,6 +2348,7 @@ function historial(h){
     const c=(f&&f.cartera)||(ok&&ok.cartera)||(p&&p.cartera)||"";
     if(e.ev_cart_fecha) return '<span class="rchip ok">Cartera '+esc(e.ev_cartera||c)+": recibida"+(ok?" en "+ok.rel+" por "+esc(ok.confirmado_por):"")+"</span>";
     if(p) return '<span class="rchip env">Cartera '+esc(p.cartera||c)+": enviada en "+p.rel+", por confirmar</span>";
+    if(e.contado&&e.pagada!==false) return '<span class="rchip ok">Cartera: no aplica (contado pagada)</span>';
     return '<span class="rchip pen">Cartera '+esc(c)+": pendiente de enviar</span>"};
   const evd=(d,e)=>{const ok=its.filter(i=>i.destino===d&&i.estado==="recibida").pop(), p=its.find(i=>i.destino===d&&i.estado==="pendiente"), fa=its.filter(i=>i.destino===d&&i.estado==="faltante").pop();
     const n=d==="cyc"?"Crédito y Cobranza":"Archivo almacén";
@@ -2377,6 +2378,7 @@ function historial(h){
     if(e.decision_fecha) ev.push([e.decision_fecha,(e.decision==="reprogramar"?"Reprogramada al "+fD(e.fecha_reprog):"Entrega cancelada")+" · "+esc(e.decision_por||"")]);
   });
   for(const i of its){const n=i.destino==="cyc"?"Crédito":i.destino==="cartera"?"la cartera "+(i.cartera||""):"Archivo";
+    if(i.rel_directa){ev.push([i.confirmado_fecha||i.rel_creado,n+" la confirmó directamente en "+i.rel+" (la recibió ella del almacén)"+(i.rel_obs?' · “'+esc(i.rel_obs)+'”':"")+" · "+esc(i.confirmado_por||"")]); continue}
     ev.push([i.rel_creado,"Enviada a "+n+" en "+i.rel+" · "+esc(i.rel_creado_por||"")+(i.rel_obs?' · “'+esc(i.rel_obs)+'”':"")]);
     if(i.confirmado_fecha) ev.push([i.confirmado_fecha,(i.estado==="recibida"?n+" la recibió"+(i.nota?' · “'+esc(i.nota)+'”':""):n+' no la recibió: "'+esc(i.nota||"")+'"')+(i.ubicacion?" · "+esc(i.ubicacion):"")+" · "+esc(i.confirmado_por||"")])}
   for(const b of h.bitacora||[]) ev.push([b.fecha,'<span class="rojo">✕ '+(b.editor?"Corrección de ":"")+esc(b.quien||"")+": "+esc(b.accion)+(b.detalle?" ("+esc(b.detalle)+")":"")+(b.motivo?' · "'+esc(b.motivo)+'"':"")+"</span>"]);
@@ -2395,14 +2397,22 @@ function vCarteras(){
   const puedeEnv=rol==="cyc"||editor()||misCart().length>0;
   const orden=((C&&C.carteras)||[]).slice().sort((a,b)=>a.localeCompare(b,"es"));
   for(const c of new Set((CP||[]).map(x=>x.cartera))) if(!orden.includes(c)) orden.push(c);
-  const grupo=c=>{const l=(CP||[]).filter(x=>x.cartera===c); if(!l.length) return "";
-    const ns=l.filter(x=>sel.has(x.id)).length, tot=l.filter(x=>sel.has(x.id)).reduce((a,x)=>a+(+x.total||0),0);
-    return '<div class="rgrupo"><div class="rgh"><b>'+esc(c)+" ("+l.length+")</b>"+(puedeEnv?' <button type="button" class="link" data-a="selk" data-k="'+esc(c)+'">Seleccionar '+l.length+"</button>":"")+"</div>"+
-      l.map(x=>'<label class="rev'+(sel.has(x.id)?" on":"")+'">'+(puedeEnv?'<input type="checkbox" data-a="sel" data-e="'+x.id+'"'+(sel.has(x.id)?" checked":"")+">":"<span></span>")+
-        "<span><b>"+esc(x.folio)+"</b> · "+esc(x.cliente||"")+" "+pago(x)+'<span class="sub">'+esc(x.cobrador)+" · "+din(x.total)+" · Crédito la recibió "+fH(x.ev_cyc_fecha)+(x.ev_cyc_por?" ("+esc(x.ev_cyc_por)+")":"")+
-        (x.falto?' · <b class="rojo">'+esc(c)+" no la recibió en "+esc(x.falto.rel)+': "'+esc(x.falto.nota||"")+'"</b>':"")+"</span></span></label>").join("")+
-      (puedeEnv?'<div class="rbar2"><span><b>'+ns+"</b> seleccionadas"+(ns?" · "+din(tot):"")+'</span><button type="button" class="prim" data-a="genk" data-k="'+esc(c)+'"'+(ns?"":" disabled")+">Enviar a "+esc(c)+" ("+ns+")</button>"+
-        '<input type="text" id="kobs_'+c.replace(/[^A-Za-z0-9]/g,"_")+'" class="busq" maxlength="300" placeholder="Observaciones (opcional)"></div>':"")+"</div>"};
+  const fila=(x,c)=>'<label class="rev'+(sel.has(x.id)?" on":"")+'">'+(puedeEnv?'<input type="checkbox" data-a="sel" data-e="'+x.id+'"'+(sel.has(x.id)?" checked":"")+">":"<span></span>")+
+        "<span><b>"+esc(x.folio)+"</b> · "+esc(x.cliente||"")+" "+pago(x)+(x.contado&&x.pagada===false?' <b class="rojo">no pagada</b>':"")+'<span class="sub">'+esc(x.cobrador)+" · "+din(x.total)+" · Crédito la recibió "+fH(x.ev_cyc_fecha)+(x.ev_cyc_por?" ("+esc(x.ev_cyc_por)+")":"")+
+        (x.falto?' · <b class="rojo">'+esc(c)+" no la recibió en "+esc(x.falto.rel)+': "'+esc(x.falto.nota||"")+'"</b>':"")+"</span></span></label>";
+  const grupo=c=>{const todas=(CP||[]).filter(x=>x.cartera===c); if(!todas.length) return "";
+    const kid=c.replace(/[^A-Za-z0-9]/g,"_");
+    const parte=(l,dir)=>{if(!l.length) return "";
+      const ns=l.filter(x=>sel.has(x.id)).length, tot=l.filter(x=>sel.has(x.id)).reduce((a,x)=>a+(+x.total||0),0);
+      return '<div class="rgh"><b>'+(dir?"Mías, solo confirmar ("+l.length+")":esc(c)+" ("+l.length+")")+"</b>"+(puedeEnv?' <button type="button" class="link" data-a="selk" data-k="'+esc(c)+'" data-dir="'+(dir?1:0)+'">Seleccionar '+l.length+"</button>":"")+"</div>"+
+        (dir?'<div class="sub2">Las recibiste tú del almacén y son de tu cartera: no hace falta enviártelas.</div>':"")+
+        l.map(x=>fila(x,c)).join("")+
+        (puedeEnv?'<div class="rbar2"><span><b>'+ns+"</b> seleccionadas"+(ns?" · "+din(tot):"")+'</span>'+
+          (dir?'<button type="button" class="prim" data-a="dirk" data-k="'+esc(c)+'"'+(ns?"":" disabled")+">Confirmar las mías ("+ns+")</button>"+
+               '<input type="text" id="kdobs_'+kid+'" class="busq" maxlength="300" placeholder="Anotaciones (opcional)">'
+              :'<button type="button" class="prim" data-a="genk" data-k="'+esc(c)+'"'+(ns?"":" disabled")+">Enviar a "+esc(c)+" ("+ns+")</button>"+
+               '<input type="text" id="kobs_'+kid+'" class="busq" maxlength="300" placeholder="Observaciones (opcional)">')+"</div>":"")};
+    return '<div class="rgrupo">'+(todas.some(x=>x.directo)?'<div class="rgh"><b>'+esc(c)+" ("+todas.length+")</b></div>":"")+parte(todas.filter(x=>x.directo),true)+parte(todas.filter(x=>!x.directo),false)+"</div>"};
   const pendG=orden.map(grupo).join("");
   const recib=relsPendCart(!editor());
   const card=r=>{const it=r.items.filter(i=>i.destino==="cartera"&&i.estado==="pendiente"), ok=it.filter(i=>!unchk.has(i.id)).length, puede=editor()||misCart().includes(r.cartera);
@@ -2414,14 +2424,14 @@ function vCarteras(){
         '<div class="acc"><button type="button" class="prim" data-a="relconf" data-r="'+r.id+'" data-d="cartera">Confirmar recepción ('+ok+" de "+it.length+")</button></div>":"")+"</div>"};
   const env=(REL||[]).filter(r=>r.nivel==="cartera"&&dias(r.creado)<=30);
   const cardE=r=>{const it=r.items, pend=it.filter(i=>i.estado==="pendiente").length, rec=it.filter(i=>i.estado==="recibida").length, c=it.find(i=>i.confirmado_fecha), sinConf=!it.some(i=>i.estado!=="pendiente");
-    return '<div class="rcard"><div class="top"><span><span class="rfolio">'+esc(r.folio)+"</span> · "+it.length+(it.length>1?" facturas":" factura")+" → "+esc(r.cartera)+'</span><span class="rtop"><span class="sub2">'+esc(r.creado_por||"")+" "+fH(r.creado)+"</span>"+
+    return '<div class="rcard"><div class="top"><span><span class="rfolio">'+esc(r.folio)+"</span> · "+it.length+(it.length>1?" facturas":" factura")+" → "+esc(r.cartera)+(r.directa?' <span class="sub2">(confirmada directamente, sin envío)</span>':"")+'</span><span class="rtop"><span class="sub2">'+esc(r.creado_por||"")+" "+fH(r.creado)+"</span>"+
       (editor()||(sinConf&&puedeEnv)?X("xrel",'data-r="'+r.id+'"',"Eliminar envío"):"")+"</span></div>"+(r.observaciones?'<div class="robs">Observaciones: “'+esc(r.observaciones)+'”</div>':"")+
       '<div class="sub2">'+(pend?'<span class="rest env">Por confirmar</span>':"<b>"+rec+" de "+it.length+"</b> recibidas"+(it.length-rec?' <span class="rest fal">'+(it.length-rec)+" faltante"+(it.length-rec>1?"s":"")+"</span>":"")+" · confirmó "+esc(c.confirmado_por)+" "+fH(c.confirmado_fecha))+"</div>"+
       (!pend&&c&&c.nota?'<div class="robs">Anotación: “'+esc(c.nota)+'”</div>':"")+
       (editor()?it.map(i=>'<div class="rxrow"><span><b>'+esc(i.folio)+"</b> · "+esc(i.cliente||"")+'<span class="sub">'+(i.estado==="pendiente"?"por confirmar":i.estado==="recibida"?"recibida":"faltó")+"</span></span>"+X("xrelf",'data-r="'+r.id+'" data-e="'+i.entrega_id+'"',"Quitar del envío")+"</div>").join("")+
         (!sinConf?'<div class="acc"><button type="button" class="rxb" data-a="xconf" data-r="'+r.id+'" data-d="cartera">Deshacer confirmación</button></div>':""):"")+"</div>"};
   return '<section class="panel"><div class="ghead"><h2>Por entregar a carteras ('+(CP||[]).length+")</h2></div>"+
-      (pendG||'<div class="vacio">No hay facturas por entregar a carteras.</div>')+'<p class="aviso">Facturas que Crédito y Cobranza ya recibió, separadas por la cartera del cobrador del cliente.</p></section>'+
+      (pendG||'<div class="vacio">No hay facturas por entregar a carteras.</div>')+'<p class="aviso">Facturas de crédito y de contado no pagadas que Crédito y Cobranza ya recibió, separadas por la cartera del cobrador del cliente. Las de contado pagadas no pasan a carteras.</p></section>'+
     '<section class="panel"><div class="ghead"><h2>Por recibir'+(editor()?"":" (mi cartera)")+" ("+recib.length+")</h2></div>"+(recib.length?'<div class="rlista">'+recib.map(card).join("")+"</div>":'<div class="vacio">Nada por recibir.</div>')+"</section>"+
     '<section class="panel"><div class="ghead"><h2>Envíos a carteras (30 días)</h2></div>'+(env.length?'<div class="rlista">'+env.map(cardE).join("")+"</div>":'<div class="vacio">Ninguno todavía.</div>')+"</section>";
 }
@@ -2471,7 +2481,7 @@ function enlazar(){
   });
   const nf=$("nfol"); if(nf) nf.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();agregarFolio(nf.value)}};
   const nv=$("nvia"); if(nv) nv.onchange=()=>{guardarForm();N.via=nv.value;pintar()};
-  box.querySelectorAll('[id^="rn_"],[id^="ru_"],[id^="kobs_"],#relobs').forEach(x=>{if(NT[x.id]!=null) x.value=NT[x.id]; x.oninput=()=>{NT[x.id]=x.value}});
+  box.querySelectorAll('[id^="rn_"],[id^="ru_"],[id^="kobs_"],[id^="kdobs_"],#relobs').forEach(x=>{if(NT[x.id]!=null) x.value=NT[x.id]; x.oninput=()=>{NT[x.id]=x.value}});
 }
 async function accion(a,el){
   const sid=el.dataset.s, eid=el.dataset.e;
@@ -2508,9 +2518,11 @@ async function accion(a,el){
         await llamar("rp_decidir",{ent:eid,d:{decision:"cancelar",comentario:m}}); aviso("Entrega cancelada"); return refrescar()}
       case"sub": sub=el.dataset.k; sel.clear(); unchk.clear(); pintar(); return;
       case"sel": el.checked?sel.add(eid):sel.delete(eid); pintar(); return;
-      case"selk": {const l=(CP||[]).filter(x=>x.cartera===el.dataset.k); const todos=l.every(x=>sel.has(x.id));
+      case"selk": {const dir=el.dataset.dir==="1", l=(CP||[]).filter(x=>x.cartera===el.dataset.k&&!!x.directo===dir); const todos=l.every(x=>sel.has(x.id));
         for(const x of l) todos?sel.delete(x.id):sel.add(x.id); pintar(); return}
-      case"genk": {const c=el.dataset.k, ids=(CP||[]).filter(x=>x.cartera===c&&sel.has(x.id)).map(x=>x.id), o=$("kobs_"+c.replace(/[^A-Za-z0-9]/g,"_"));
+      case"dirk": {const c=el.dataset.k, ids=(CP||[]).filter(x=>x.cartera===c&&x.directo&&sel.has(x.id)).map(x=>x.id), kid="kdobs_"+c.replace(/[^A-Za-z0-9]/g,"_"), o=$(kid);
+        el.disabled=true; const f=await llamar("rp_cart_directo",{ids,cart:c,obs:o?o.value.trim():""}); ids.forEach(i=>sel.delete(i)); NT[kid]=""; aviso(ids.length+(ids.length>1?" facturas confirmadas":" factura confirmada")+" en tu cartera ("+f+")"); return refrescar()}
+      case"genk": {const c=el.dataset.k, ids=(CP||[]).filter(x=>x.cartera===c&&!x.directo&&sel.has(x.id)).map(x=>x.id), o=$("kobs_"+c.replace(/[^A-Za-z0-9]/g,"_"));
         el.disabled=true; const f=await llamar("rp_cart_crear",{ids,cart:c,obs:o?o.value.trim():""}); ids.forEach(i=>sel.delete(i)); aviso("Envío "+f+" a "+c+" generado"); return refrescar()}
       case"selg": {const l=pendEnviar().filter(e=>e.salida_id===sid); const todos=l.every(e=>sel.has(e.id));
         for(const e of l) todos?sel.delete(e.id):sel.add(e.id); pintar(); return}
