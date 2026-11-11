@@ -2622,7 +2622,7 @@ const fmt=new Intl.NumberFormat("es-MX",{maximumFractionDigits:0});
 const din=v=>"$"+fmt.format(Math.round(+v||0));
 const PASOS=["En espera","Surtido planta alta","Surtido planta baja","Facturación","Revisión","Listo para cargar"];
 const ENV=7, REV=5;
-let ORIG=null, rpc=null, puede=false, INI="", REC=new Map(), D=null, sel=new Set(), via="", bus="", arr=null, tD=0, MSG={t:"",mal:false};
+let ORIG=null, rpc=null, puede=false, INI="", REC=new Map(), D=null, sel=new Set(), via=new Set(), bus="", arr=null, tD=0, MSG={t:"",mal:false};
 const loc=t=>{const d=new Date(t),z=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate())+" "+z(d.getHours())+":"+z(d.getMinutes())};
 const hoy=()=>loc(Date.now()).slice(0,10);
 const corto=f=>String(f||"").replace(/^([A-Za-z]*)0+(?=\d)/,"$1");
@@ -2647,7 +2647,7 @@ function pedidos(){
     const nuevas=fa.filter(x=>env?x[1]>env:(!INI||x[1]>=INI));
     let etapa, resto=false, auto=false;
     if(env){ if(nuevas.length){etapa=REV;auto=true} else if(p.s==="N"||p.s==="R"){etapa=1;resto=true} else continue }
-    else{ etapa=r?r.etapa:2; // los pedidos nuevos empiezan en Surtido planta alta
+    else{ etapa=r?r.etapa:(p.s==="R"?1:2); // nuevos: 100% sin surtir → Surtido planta alta; parciales → En espera
       if(!r&&p.s!=="N"&&p.s!=="R"&&!nuevas.length) continue;
       if(nuevas.length&&etapa<REV){etapa=REV;auto=true} }
     const fol=etapa>=REV&&nuevas.length?corto(nuevas[0][0])+(nuevas.length>1?"+"+(nuevas.length-1):""):"";
@@ -2657,7 +2657,7 @@ function pedidos(){
   }
   return out;
 }
-const filtra=l=>l.filter(p=>(!via||p.via===via)&&(!bus||(p.f+" "+corto(p.f)+" "+p.c+" "+p.facs).toLowerCase().includes(bus)));
+const filtra=l=>l.filter(p=>(!via.size||via.has(p.via))&&(!bus||(p.f+" "+corto(p.f)+" "+p.c+" "+p.facs).toLowerCase().includes(bus)));
 const enviadosHoy=()=>[...REC.values()].filter(r=>r.etapa===ENV&&loc(r.movido).slice(0,10)===hoy()).length;
 
 function tarjeta(p){
@@ -2677,7 +2677,6 @@ function pintar(){
   const todos=pedidos(), l=filtra(todos);
   for(const f of [...sel]) if(!l.some(p=>p.f===f)) sel.delete(f);
   const vias=[...todos.reduce((m,p)=>m.set(p.via,(m.get(p.via)||0)+1),new Map())].sort((a,b)=>a[0].localeCompare(b[0]));
-  if(via&&!vias.some(v=>v[0]===via)) via="";
   const eh=enviadosHoy();
   const cols=PASOS.map((n,i)=>{const e=i+1, ps=l.filter(p=>p.etapa===e).sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h));
     const ns=ps.filter(p=>sel.has(p.f)).length, todosSel=ps.length&&ns===ps.length;
@@ -2687,15 +2686,16 @@ function pintar(){
       '</div><div class="avlista">'+(ps.length?ps.map(tarjeta).join(""):'<div class="avvacio">Sin pedidos</div>')+"</div></div>"});
   const ns=sel.size;
   const t0=box.querySelector(".avtab"), scroll=t0?t0.scrollLeft:0, pos=[...box.querySelectorAll(".avlista")].map(x=>x.scrollTop);
-  const foc=document.activeElement&&document.activeElement.id==="avbus";
+  const foc=document.activeElement&&document.activeElement.id==="svbus";
   box.innerHTML='<section class="panel controles"><div class="avbar">'+
-      '<div class="campo" style="flex:1 1 260px"><label class="etq" for="avvia">Vía de embarque</label><select id="avvia" style="width:100%"><option value="">Todas las vías ('+todos.length+")</option>"+
-        vias.map(([v,n])=>'<option value="'+esc(v)+'"'+(v===via?" selected":"")+">"+esc(v)+" ("+n+")</option>").join("")+"</select></div>"+
-      '<div class="campo" style="flex:1 1 220px"><label class="etq" for="avbus">Buscar</label><input type="search" id="avbus" class="busq" placeholder="Pedido, factura o cliente" value="'+esc(bus)+'" style="width:100%"></div>'+
+      '<div class="campo" style="flex:1 1 260px"><span class="etq">Vía de embarque</span><button type="button" class="fbtn'+(via.size?" on":"")+'" data-av="vias" style="width:100%"><span class="v">'+
+        (via.size?(via.size===1?esc([...via][0]):via.size+" vías seleccionadas"):"Todas las vías ("+todos.length+")")+"</span></button></div>"+
+      '<div class="campo" style="flex:1 1 220px"><label class="etq" for="svbus">Buscar</label><input type="search" id="svbus" class="busq" placeholder="Pedido, factura o cliente" value="'+esc(bus)+'" style="width:100%"></div>'+
       (puede?'<div class="campo"><button type="button" class="btn" data-av="selall">Seleccionar todos ('+l.length+")</button></div>":"")+
-    '</div><p class="aviso" style="margin:8px 0 0">Pedidos sin surtir y parciales de Microsip (los surtidos, cerrados y cancelados no entran). '+
+    "</div>"+(via.size?'<div class="chips" style="margin-top:8px">'+[...via].sort().map(v=>'<span class="chip">'+esc(v)+' <button type="button" class="x" data-av="quitavia" data-v="'+esc(v)+'" aria-label="Quitar '+esc(v)+'">×</button></span>').join("")+"</div>":"")+
+    '<p class="aviso" style="margin:8px 0 0">Pedidos sin surtir y parciales de Microsip (los surtidos, cerrados y cancelados no entran). '+
       (puede?"Arrastra un pedido a otro paso, o marca varios y arrástralos juntos (o usa “Mover a”). ":"")+
-      "Los pedidos nuevos empiezan en Surtido planta alta; En espera es para apartar los que no se deben surtir todavía. Al facturarse o remisionarse pasan solos a Revisión, con el folio de la factura (+n si son varias). En “Listo para cargar” se marcan como enviados y salen del tablero; lo que falte de un parcial regresa a En espera.</p></section>"+
+      "Los pedidos nuevos 100% sin surtir empiezan en Surtido planta alta y los parciales en En espera. Al facturarse o remisionarse pasan solos a Revisión, con el folio de la factura (+n si son varias). En “Listo para cargar” se marcan como enviados y salen del tablero; lo que falte de un parcial regresa a En espera.</p></section>"+
     (puede&&ns?'<div class="avsel"><b>'+ns+(ns>1?" pedidos seleccionados":" pedido seleccionado")+"</b> · "+din(l.filter(p=>sel.has(p.f)).reduce((a,p)=>a+(+p.i||0),0))+
       '<span style="margin-left:auto"></span><label for="avdest">Mover a</label><select id="avdest">'+PASOS.map((n,i)=>'<option value="'+(i+1)+'">'+(i+1)+". "+esc(n)+"</option>").join("")+
       '<option value="7">Enviado (sale del tablero)</option></select><button type="button" class="prim" data-av="mover">Mover</button><button type="button" class="link" data-av="limpiar">Quitar selección</button></div>':"")+
@@ -2706,7 +2706,7 @@ function pintar(){
   t.scrollLeft=scroll; box.querySelectorAll(".avlista").forEach((x,i)=>{x.scrollTop=pos[i]||0});
   barra(t,b); requestAnimationFrame(()=>barra(t,b));
   if(ns){const d=$("avdest"), m=Math.max(...l.filter(p=>sel.has(p.f)).map(p=>p.etapa)); d.value=String(Math.min(m+1,7))}
-  if(foc){const x=$("avbus"); x.focus(); x.setSelectionRange(x.value.length,x.value.length)}
+  if(foc){const x=$("svbus"); x.focus(); x.setSelectionRange(x.value.length,x.value.length)}
 }
 // Barra horizontal propia (siempre visible cuando no caben las columnas): riel, tope arrastrable y flechas
 function barra(t,b){
@@ -2722,6 +2722,24 @@ function barra(t,b){
   b.querySelector('[data-av="der"]').onclick=()=>t.scrollBy({left:220,behavior:"smooth"});
 }
 window.addEventListener("resize",()=>{const t=document.querySelector("#aAv .avtab"), b=document.querySelector("#aAv .avbarra"); if(t&&b) barra(t,b)});
+
+// Selector de vías (varias a la vez), igual al de la subpestaña Pedidos
+function selVias(){
+  const velo=$("velo"), s2=new Set(via), cnt=pedidos().reduce((m,p)=>m.set(p.via,(m.get(p.via)||0)+1),new Map()), todas=[...cnt.keys()].sort((a,b)=>a.localeCompare(b,"es"));
+  velo.innerHTML='<div class="hoja" role="dialog" aria-modal="true" aria-label="Filtrar por vía de embarque"><header><h3>Vías de embarque</h3><button type="button" class="link" id="svcerrar">Cerrar</button></header>'+
+    '<div class="bus"><input type="search" id="svvbus" placeholder="Buscar vía" autocomplete="off"></div><ul id="svlista"></ul>'+
+    '<div class="pie"><button type="button" class="link" id="svlimpiar">Quitar selección</button><button type="button" class="prim" id="svaplicar">Aplicar</button></div></div>';
+  velo.hidden=false;
+  const lista=$("svlista"), bq=$("svvbus");
+  const pl=()=>{const q=bq.value.trim().toLowerCase();
+    lista.innerHTML=todas.filter(v=>!q||v.toLowerCase().includes(q)).map(v=>'<li><label><input type="checkbox" value="'+esc(v)+'"'+(s2.has(v)?" checked":"")+'><span class="tx">'+esc(v)+'</span><span class="cl" style="margin-left:auto">'+cnt.get(v)+(cnt.get(v)>1?" pedidos":" pedido")+"</span></label></li>").join("")||'<li class="nota">Sin coincidencias</li>'};
+  lista.onchange=e=>{e.target.checked?s2.add(e.target.value):s2.delete(e.target.value)};
+  bq.oninput=pl; pl(); setTimeout(()=>bq.focus(),30);
+  const cerrar=()=>{velo.hidden=true; velo.innerHTML=""};
+  $("svcerrar").onclick=cerrar; velo.onclick=e=>{if(e.target===velo) cerrar()};
+  $("svlimpiar").onclick=()=>{s2.clear(); pl()};
+  $("svaplicar").onclick=()=>{via=s2; cerrar(); pintar()};
+}
 
 async function mover(folios,etapa){
   if(!folios.length) return;
@@ -2741,14 +2759,15 @@ async function mover(folios,etapa){
 function eventos(){
   const box=$("aAv");
   box.addEventListener("change",ev=>{const el=ev.target;
-    if(el.id==="avvia"){via=el.value; pintar(); return}
     if(el.dataset.av==="sel"){const f=el.closest(".avcard").dataset.f; el.checked?sel.add(f):sel.delete(f); pintar(); return}
     if(el.dataset.av==="todos"){const e=+el.dataset.e, ps=filtra(pedidos()).filter(p=>p.etapa===e); for(const p of ps) el.checked?sel.add(p.f):sel.delete(p.f); pintar()}});
-  box.addEventListener("input",ev=>{if(ev.target.id==="avbus"){bus=ev.target.value.trim().toLowerCase(); pintar()}});
+  box.addEventListener("input",ev=>{if(ev.target.id==="svbus"){bus=ev.target.value.trim().toLowerCase(); pintar()}});
   box.addEventListener("click",ev=>{const b=ev.target.closest("[data-av]");
     if(b&&b.tagName==="BUTTON"){const a=b.dataset.av;
       if(a==="selall"){for(const p of filtra(pedidos())) sel.add(p.f); pintar()}
       else if(a==="limpiar"){sel.clear(); pintar()}
+      else if(a==="vias") selVias();
+      else if(a==="quitavia"){via.delete(b.dataset.v); pintar()}
       else if(a==="mover"){mover([...sel],+$("avdest").value)}
       else if(a==="enviar"){const l=filtra(pedidos()).filter(p=>p.etapa===6&&sel.has(p.f)).map(p=>p.f); mover(l,ENV)}
       return}
