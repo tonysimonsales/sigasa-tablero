@@ -2622,7 +2622,7 @@ const fmt=new Intl.NumberFormat("es-MX",{maximumFractionDigits:0});
 const din=v=>"$"+fmt.format(Math.round(+v||0));
 const PASOS=["En espera","Surtido planta alta","Surtido planta baja","Facturación","Revisión","Listo para cargar"];
 const ENV=7, REV=5;
-let ORIG=null, rpc=null, puede=false, INI="", REC=new Map(), D=null, sel=new Set(), via=new Set(), bus="", arr=null, tD=0, MSG={t:"",mal:false};
+let ORIG=null, rpc=null, puede=false, INI="", REC=new Map(), D=null, sel=new Set(), via=new Set(), bus="", busTx="", arr=null, tD=0, MSG={t:"",mal:false};
 const loc=t=>{const d=new Date(t),z=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate())+" "+z(d.getHours())+":"+z(d.getMinutes())};
 const hoy=()=>loc(Date.now()).slice(0,10);
 const corto=f=>String(f||"").replace(/^([A-Za-z]*)0+(?=\d)/,"$1");
@@ -2657,7 +2657,14 @@ function pedidos(){
   }
   return out;
 }
-const filtra=l=>l.filter(p=>(!via.size||via.has(p.via))&&(!bus||(p.f+" "+corto(p.f)+" "+p.c+" "+p.facs).toLowerCase().includes(bus)));
+const sinAc=t=>String(t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+const filtra=l=>{const ps=sinAc(bus).split(/\s+/).filter(Boolean);
+  return l.filter(p=>{if(via.size&&!via.has(p.via)) return false; if(!ps.length) return true;
+    const t=sinAc(p.f+" "+corto(p.f)+" "+p.c+" "+p.facs); return ps.every(w=>t.includes(w))})};
+// El filtro (vías y búsqueda) se conserva al recargar la página
+const FK="surtido_filtro";
+const guardaF=()=>{try{localStorage.setItem(FK,JSON.stringify({via:[...via],bus:busTx}))}catch(e){}};
+try{const g=JSON.parse(localStorage.getItem(FK)||"null"); if(g){via=new Set(g.via||[]); busTx=g.bus||""; bus=busTx.trim()}}catch(e){}
 const enviadosHoy=()=>[...REC.values()].filter(r=>r.etapa===ENV&&loc(r.movido).slice(0,10)===hoy()).length;
 
 function tarjeta(p){
@@ -2686,11 +2693,11 @@ function pintar(){
       '</div><div class="avlista">'+(ps.length?ps.map(tarjeta).join(""):'<div class="avvacio">Sin pedidos</div>')+"</div></div>"});
   const ns=sel.size;
   const t0=box.querySelector(".avtab"), scroll=t0?t0.scrollLeft:0, pos=[...box.querySelectorAll(".avlista")].map(x=>x.scrollTop);
-  const foc=document.activeElement&&document.activeElement.id==="svbus";
+  const foc=document.activeElement&&document.activeElement.id==="svbus", car=foc?document.activeElement.selectionStart:0;
   box.innerHTML='<section class="panel controles"><div class="avbar">'+
       '<div class="campo" style="flex:1 1 260px"><span class="etq">Vía de embarque</span><button type="button" class="fbtn'+(via.size?" on":"")+'" data-av="vias" style="width:100%"><span class="v">'+
         (via.size?(via.size===1?esc([...via][0]):via.size+" vías seleccionadas"):"Todas las vías ("+todos.length+")")+"</span></button></div>"+
-      '<div class="campo" style="flex:1 1 220px"><label class="etq" for="svbus">Buscar</label><input type="search" id="svbus" class="busq" placeholder="Pedido, factura o cliente" value="'+esc(bus)+'" style="width:100%"></div>'+
+      '<div class="campo" style="flex:1 1 220px"><label class="etq" for="svbus">Buscar</label><input type="search" id="svbus" class="busq" placeholder="Pedido, factura o cliente" value="'+esc(busTx)+'" style="width:100%"></div>'+
       (puede?'<div class="campo"><button type="button" class="btn" data-av="selall">Seleccionar todos ('+l.length+")</button></div>":"")+
     "</div>"+(via.size?'<div class="chips" style="margin-top:8px">'+[...via].sort().map(v=>'<span class="chip">'+esc(v)+' <button type="button" class="x" data-av="quitavia" data-v="'+esc(v)+'" aria-label="Quitar '+esc(v)+'">×</button></span>').join("")+"</div>":"")+
     '<p class="aviso" style="margin:8px 0 0">Pedidos sin surtir y parciales de Microsip (los surtidos, cerrados y cancelados no entran). '+
@@ -2706,7 +2713,7 @@ function pintar(){
   t.scrollLeft=scroll; box.querySelectorAll(".avlista").forEach((x,i)=>{x.scrollTop=pos[i]||0});
   barra(t,b); requestAnimationFrame(()=>barra(t,b));
   if(ns){const d=$("avdest"), m=Math.max(...l.filter(p=>sel.has(p.f)).map(p=>p.etapa)); d.value=String(Math.min(m+1,7))}
-  if(foc){const x=$("svbus"); x.focus(); x.setSelectionRange(x.value.length,x.value.length)}
+  if(foc){const x=$("svbus"); x.focus(); x.setSelectionRange(car,car)}
 }
 // Barra horizontal propia (siempre visible cuando no caben las columnas): riel, tope arrastrable y flechas
 function barra(t,b){
@@ -2738,7 +2745,7 @@ function selVias(){
   const cerrar=()=>{velo.hidden=true; velo.innerHTML=""};
   $("svcerrar").onclick=cerrar; velo.onclick=e=>{if(e.target===velo) cerrar()};
   $("svlimpiar").onclick=()=>{s2.clear(); pl()};
-  $("svaplicar").onclick=()=>{via=s2; cerrar(); pintar()};
+  $("svaplicar").onclick=()=>{via=s2; guardaF(); cerrar(); pintar()};
 }
 
 async function mover(folios,etapa){
@@ -2761,13 +2768,13 @@ function eventos(){
   box.addEventListener("change",ev=>{const el=ev.target;
     if(el.dataset.av==="sel"){const f=el.closest(".avcard").dataset.f; el.checked?sel.add(f):sel.delete(f); pintar(); return}
     if(el.dataset.av==="todos"){const e=+el.dataset.e, ps=filtra(pedidos()).filter(p=>p.etapa===e); for(const p of ps) el.checked?sel.add(p.f):sel.delete(p.f); pintar()}});
-  box.addEventListener("input",ev=>{if(ev.target.id==="svbus"){bus=ev.target.value.trim().toLowerCase(); pintar()}});
+  box.addEventListener("input",ev=>{if(ev.target.id==="svbus"){busTx=ev.target.value; bus=busTx.trim(); guardaF(); pintar()}});
   box.addEventListener("click",ev=>{const b=ev.target.closest("[data-av]");
     if(b&&b.tagName==="BUTTON"){const a=b.dataset.av;
       if(a==="selall"){for(const p of filtra(pedidos())) sel.add(p.f); pintar()}
       else if(a==="limpiar"){sel.clear(); pintar()}
       else if(a==="vias") selVias();
-      else if(a==="quitavia"){via.delete(b.dataset.v); pintar()}
+      else if(a==="quitavia"){via.delete(b.dataset.v); guardaF(); pintar()}
       else if(a==="mover"){mover([...sel],+$("avdest").value)}
       else if(a==="enviar"){const l=filtra(pedidos()).filter(p=>p.etapa===6&&sel.has(p.f)).map(p=>p.f); mover(l,ENV)}
       return}
