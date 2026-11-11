@@ -58,6 +58,8 @@ async function arrancar(){
   if(data.rol==="chofer"){for(const t of ["tabR","tabV","tabC","tabA"]) $(t).hidden=true; window.PANEL.inicio="tabD"; window.PANEL.mostrar("tabD")}
   // Reparto: admin, supervisores, almacén y Crédito y Cobranza (cyc); cyc solo ve esa pestaña
   if(data.rol==="cyc"){for(const t of ["tabR","tabV","tabC","tabA"]) $(t).hidden=true}
+  // Almacén · Avance de pedidos (supabase/29)
+  if(window.PANEL.avanceIniciar&&!$("tabA").hidden) window.PANEL.avanceIniciar((fn,args)=>sb.rpc(fn,args));
   if(window.PANEL.repartoIniciar) window.PANEL.repartoIniciar((fn,args)=>sb.rpc(fn,args),data.rol).then(ok=>{
     if(ok&&data.rol==="cyc"){window.PANEL.inicio="tabE"; window.PANEL.mostrar("tabE")}});
   if(data.ve_uso){$("tabU").hidden=false; window.PANEL.uso=()=>usoProm||(usoProm=reporteUso())}
