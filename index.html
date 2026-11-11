@@ -2647,7 +2647,7 @@ function pedidos(){
     const nuevas=fa.filter(x=>env?x[1]>env:(!INI||x[1]>=INI));
     let etapa, resto=false, auto=false;
     if(env){ if(nuevas.length){etapa=REV;auto=true} else if(p.s==="N"||p.s==="R"){etapa=1;resto=true} else continue }
-    else{ etapa=r?r.etapa:1;
+    else{ etapa=r?r.etapa:2; // los pedidos nuevos empiezan en Surtido planta alta
       if(!r&&p.s!=="N"&&p.s!=="R"&&!nuevas.length) continue;
       if(nuevas.length&&etapa<REV){etapa=REV;auto=true} }
     const fol=etapa>=REV&&nuevas.length?corto(nuevas[0][0])+(nuevas.length>1?"+"+(nuevas.length-1):""):"";
@@ -2695,7 +2695,7 @@ function pintar(){
       (puede?'<div class="campo"><button type="button" class="btn" data-av="selall">Seleccionar todos ('+l.length+")</button></div>":"")+
     '</div><p class="aviso" style="margin:8px 0 0">Pedidos sin surtir y parciales de Microsip (los surtidos, cerrados y cancelados no entran). '+
       (puede?"Arrastra un pedido a otro paso, o marca varios y arrástralos juntos (o usa “Mover a”). ":"")+
-      "Al facturarse o remisionarse pasan solos a Revisión, con el folio de la factura (+n si son varias). En “Listo para cargar” se marcan como enviados y salen del tablero; lo que falte de un parcial regresa a En espera.</p></section>"+
+      "Los pedidos nuevos empiezan en Surtido planta alta; En espera es para apartar los que no se deben surtir todavía. Al facturarse o remisionarse pasan solos a Revisión, con el folio de la factura (+n si son varias). En “Listo para cargar” se marcan como enviados y salen del tablero; lo que falte de un parcial regresa a En espera.</p></section>"+
     (puede&&ns?'<div class="avsel"><b>'+ns+(ns>1?" pedidos seleccionados":" pedido seleccionado")+"</b> · "+din(l.filter(p=>sel.has(p.f)).reduce((a,p)=>a+(+p.i||0),0))+
       '<span style="margin-left:auto"></span><label for="avdest">Mover a</label><select id="avdest">'+PASOS.map((n,i)=>'<option value="'+(i+1)+'">'+(i+1)+". "+esc(n)+"</option>").join("")+
       '<option value="7">Enviado (sale del tablero)</option></select><button type="button" class="prim" data-av="mover">Mover</button><button type="button" class="link" data-av="limpiar">Quitar selección</button></div>':"")+
