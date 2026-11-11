@@ -82,6 +82,12 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:va
 
 .graf h2,.desg h2{font-family:var(--f-display);font-weight:600;font-size:1.15rem;margin:0}
 .ghead{display:flex;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.plegar{margin-left:auto;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink,inherit);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:none;padding:0}
+.plegar:hover{background:var(--bg,#f2f3f5)}
+.plegar svg{width:16px;height:16px;transition:transform .15s}
+section.plegado .plegar svg{transform:rotate(-90deg)}
+section.plegado>.ghead{margin-bottom:0}
+section.plegado>:not(.ghead){display:none!important}
 .leyenda{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:.82rem;color:var(--ink-2)}
 .leyenda span{display:inline-flex;align-items:center;gap:6px}
 .leyenda i{width:10px;height:10px;border-radius:2px}
@@ -2544,5 +2550,21 @@ async function accion(a,el){
     }
   }catch(e){aviso(e.message); if(el) el.disabled=false}
 }
+})();
+</script>
+<script>
+// Reparto: flecha en cada sección para contraer o expandir (se recuerda en este navegador)
+(()=>{const box=document.getElementById("ecuerpo"); if(!box) return;
+  const K="reparto_plegadas"; let P; try{P=new Set(JSON.parse(localStorage.getItem(K)||"[]"))}catch(e){P=new Set()}
+  const guarda=()=>{try{localStorage.setItem(K,JSON.stringify([...P]))}catch(e){}};
+  const clave=h=>h.textContent.replace(/\(\d+\)/g,"").replace(/\s+/g," ").trim();
+  const flecha='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+  const decora=()=>box.querySelectorAll("section.panel>.ghead").forEach(g=>{const h=g.querySelector("h2"); if(!h) return;
+    const sec=g.parentElement, k=clave(h); sec.classList.toggle("plegado",P.has(k));
+    let b=g.querySelector(".plegar"); if(!b){b=document.createElement("button"); b.type="button"; b.className="plegar"; b.innerHTML=flecha; g.appendChild(b)}
+    b.dataset.k=k; b.title=P.has(k)?"Expandir":"Contraer"; b.setAttribute("aria-expanded",P.has(k)?"false":"true")});
+  new MutationObserver(decora).observe(box,{childList:true,subtree:true}); decora();
+  box.addEventListener("click",ev=>{const b=ev.target.closest(".plegar"); if(!b) return; ev.stopPropagation();
+    const k=b.dataset.k; P.has(k)?P.delete(k):P.add(k); guarda(); decora()},true);
 })();
 </script>
