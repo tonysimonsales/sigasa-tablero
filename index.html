@@ -2622,7 +2622,7 @@ const fmt=new Intl.NumberFormat("es-MX",{maximumFractionDigits:0});
 const din=v=>"$"+fmt.format(Math.round(+v||0));
 const PASOS=["En espera","Surtido planta alta","Surtido planta baja","Facturación","Revisión","Listo para cargar"];
 const ENV=7, REV=5;
-let ORIG=null, rpc=null, puede=false, INI="", REC=new Map(), D=null, sel=new Set(), via=new Set(), bus="", busTx="", arr=null, tD=0, MSG={t:"",mal:false};
+let ORIG=null, rpc=null, puede=false, INI="", REC=new Map(), RP=new Map(), ENVH=0, D=null, sel=new Set(), via=new Set(), bus="", busTx="", arr=null, tD=0, MSG={t:"",mal:false};
 const loc=t=>{const d=new Date(t),z=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate())+" "+z(d.getHours())+":"+z(d.getMinutes())};
 const hoy=()=>loc(Date.now()).slice(0,10);
 const corto=f=>String(f||"").replace(/^([A-Za-z]*)0+(?=\d)/,"$1");
@@ -2630,7 +2630,8 @@ const hace=t=>{if(!t) return ""; const m=Math.round((Date.now()-new Date(t))/6e4
 const aviso=(t,mal)=>{MSG={t,mal}; const a=$("avaviso"); if(a){a.textContent=t; a.style.color=mal?"var(--bad)":""} clearTimeout(aviso.t); aviso.t=setTimeout(()=>{MSG={t:"",mal:false}; const b=$("avaviso"); if(b) b.textContent=""},7000)};
 async function llamar(fn,args){const {data,error}=await rpc(fn,args||{}); if(error) throw new Error(error.message); return data}
 
-async function lista(){const r=await llamar("ap_lista"); puede=!!r.puede_mover; INI=r.inicio||""; REC=new Map((r.pedidos||[]).map(x=>[x.f,x]))}
+async function lista(){const r=await llamar("ap_lista"); puede=!!r.puede_mover; INI=r.inicio||""; REC=new Map((r.pedidos||[]).map(x=>[x.f,x]));
+  RP=new Map((r.reparto||[]).map(x=>[String(x[0]).trim(),{e:x[1],t:x[2],m:x[3]}]))}
 async function datos(forzar){
   if(window.ALM_D&&!forzar){D=window.ALM_D; return}
   if(window.FUENTE&&window.FUENTE.almacen) D=await window.FUENTE.almacen();
@@ -2640,20 +2641,30 @@ async function datos(forzar){
 // Pedidos del tablero: sin surtir y parciales. Con factura o remisión nueva (después del arranque o del último envío)
 // van a Revisión aunque Microsip ya los marque surtidos; al marcarlos enviados salen (lo que falte de un parcial regresa a En espera).
 function pedidos(){
-  const out=[];
+  const out=[], h=hoy(); ENVH=0;
   for(const p of (D&&D.pedidos)||[]){
     if(p.s==="C"||p.s==="E") continue;
-    const r=REC.get(p.f), fa=p.fa||[], env=r&&r.etapa===ENV?loc(r.movido):"";
-    const nuevas=fa.filter(x=>env?x[1]>env:(!INI||x[1]>=INI));
-    let etapa, resto=false, auto=false;
-    if(env){ if(nuevas.length){etapa=REV;auto=true} else if(p.s==="N"||p.s==="R"){etapa=1;resto=true} else continue }
-    else{ etapa=r?r.etapa:(p.s==="R"?1:2); // nuevos: 100% sin surtir → Surtido planta alta; parciales → En espera
-      if(!r&&p.s!=="N"&&p.s!=="R"&&!nuevas.length) continue;
-      if(nuevas.length&&etapa<REV){etapa=REV;auto=true} }
-    const fol=etapa>=REV&&nuevas.length?corto(nuevas[0][0])+(nuevas.length>1?"+"+(nuevas.length-1):""):"";
+    const r=REC.get(p.f), env=r&&r.etapa===ENV?loc(r.movido):"";
+    const fa=(p.fa||[]).filter(x=>!INI||x[1]>=INI);               // facturas/remisiones desde el arranque
+    const st=x=>RP.get(x[0]);                                       // última entrega de esa factura en Reparto
+    const falla=fa.filter(x=>st(x)&&st(x).e==="falla"), enRep=fa.filter(x=>st(x)&&st(x).e==="ok");
+    const pend=fa.filter(x=>!st(x)&&(!env||x[1]>env));             // facturadas que todavía no salen
+    const tF=falla.length?Math.max(...falla.map(x=>+new Date(st(x).t))):0;
+    const manualDespues=!!(r&&tF&&+new Date(r.movido)>tF);          // alguien lo movió a mano después de la falla
+    let etapa, resto=false, auto=false, nota="";
+    if(falla.length&&!manualDespues){etapa=6; nota=falla.map(x=>st(x).m).join(" · ")}
+    else if(manualDespues&&!env){etapa=pend.length?Math.max(r.etapa,REV):r.etapa}
+    else if(pend.length){etapa=Math.max(r&&!env?r.etapa:0,REV); auto=!(r&&!env&&r.etapa>=REV)}
+    else if(env||enRep.length){
+      if(!env&&enRep.some(x=>loc(st(x).t).slice(0,10)===h)) ENVH++;
+      if(p.s==="N"||p.s==="R"){etapa=1;resto=true} else continue}
+    else{ if(!r&&p.s!=="N"&&p.s!=="R") continue; etapa=r?r.etapa:(p.s==="R"?1:2) } // nuevos: 100% sin surtir → planta alta; parciales → En espera
+    const vis=etapa>=REV?(pend.length?pend:falla.length?falla:fa):[];
+    const fol=vis.length?corto(vis[0][0])+(vis.length>1?"+"+(vis.length-1):""):"";
+    const ult=pend.length?pend[pend.length-1][1]:"";
     out.push({f:p.f,c:p.c,via:D.vias[p.via]||"SIN VÍA",v:p.v,d:p.d,h:p.h,i:p.s==="R"?p.ip:p.i,tot:p.i,s:p.s,pct:p.pu?Math.round(p.su/p.pu*100):0,
-      etapa,auto,resto,fac:nuevas.length>0,fol,facs:nuevas.map(x=>corto(x[0])).join(", "),
-      movido:auto?(nuevas[nuevas.length-1][1]):(r&&!env?r.movido:null),por:auto?"factura":(r&&!env?r.por:null)});
+      etapa,auto,resto,nota,fac:fa.length>0&&!resto,fol,facs:fa.map(x=>corto(x[0])).join(", "),
+      movido:auto?ult:(r&&!env?r.movido:null),por:auto?"factura":(r&&!env?r.por:null)});
   }
   return out;
 }
@@ -2665,7 +2676,7 @@ const filtra=l=>{const ps=sinAc(bus).split(/\s+/).filter(Boolean);
 const FK="surtido_filtro";
 const guardaF=()=>{try{localStorage.setItem(FK,JSON.stringify({via:[...via],bus:busTx}))}catch(e){}};
 try{const g=JSON.parse(localStorage.getItem(FK)||"null"); if(g){via=new Set(g.via||[]); busTx=g.bus||""; bus=busTx.trim()}}catch(e){}
-const enviadosHoy=()=>[...REC.values()].filter(r=>r.etapa===ENV&&loc(r.movido).slice(0,10)===hoy()).length;
+const enviadosHoy=()=>[...REC.values()].filter(r=>r.etapa===ENV&&loc(r.movido).slice(0,10)===hoy()).length+ENVH;
 
 function tarjeta(p){
   const on=sel.has(p.f);
@@ -2675,6 +2686,7 @@ function tarjeta(p){
       (p.fol?'<span class="fol" title="'+esc(p.facs)+'">'+esc(p.fol)+"</span>":"")+'<span class="im">'+din(p.i)+"</span></div>"+
     '<div class="cl" title="'+esc(p.c)+'">'+esc(p.c)+"</div>"+
     '<div class="sm" title="'+esc(p.via)+'">'+esc(p.via)+"</div>"+
+    (p.nota?'<div class="sm" style="color:var(--bad)" title="'+esc(p.nota)+'"><b>'+esc(p.nota)+"</b></div>":"")+
     '<div class="sm">'+(p.resto?'<span class="pc">Resto pendiente</span> · ':p.s==="R"?'<span class="pc">Parcial '+p.pct+"%</span> · ":"")+
       (p.d?esc(p.d.slice(8,10)+"/"+p.d.slice(5,7))+(p.h?" "+esc(p.h):""):"")+(t?" · "+t:"")+"</div></div>";
 }
@@ -2702,7 +2714,7 @@ function pintar(){
     "</div>"+(via.size?'<div class="chips" style="margin-top:8px">'+[...via].sort().map(v=>'<span class="chip">'+esc(v)+' <button type="button" class="x" data-av="quitavia" data-v="'+esc(v)+'" aria-label="Quitar '+esc(v)+'">×</button></span>').join("")+"</div>":"")+
     '<p class="aviso" style="margin:8px 0 0">Pedidos sin surtir y parciales de Microsip (los surtidos, cerrados y cancelados no entran). '+
       (puede?"Arrastra un pedido a otro paso, o marca varios y arrástralos juntos (o usa “Mover a”). ":"")+
-      "Los pedidos nuevos 100% sin surtir empiezan en Surtido planta alta y los parciales en En espera. Al facturarse o remisionarse pasan solos a Revisión, con el folio de la factura (+n si son varias). En “Listo para cargar” se marcan como enviados y salen del tablero; lo que falte de un parcial regresa a En espera.</p></section>"+
+      "Los pedidos nuevos 100% sin surtir empiezan en Surtido planta alta y los parciales en En espera. Al facturarse o remisionarse pasan solos a Revisión, con el folio de la factura (+n si son varias). Cuando la factura se agrega a una salida de Reparto el pedido sale solo del tablero (lo que no va en salida, como remisiones, se marca enviado en “Listo para cargar”); si la entrega no se logra regresa a Listo para cargar. Lo que falte de un parcial regresa a En espera.</p></section>"+
     (puede&&ns?'<div class="avsel"><b>'+ns+(ns>1?" pedidos seleccionados":" pedido seleccionado")+"</b> · "+din(l.filter(p=>sel.has(p.f)).reduce((a,p)=>a+(+p.i||0),0))+
       '<span style="margin-left:auto"></span><label for="avdest">Mover a</label><select id="avdest">'+PASOS.map((n,i)=>'<option value="'+(i+1)+'">'+(i+1)+". "+esc(n)+"</option>").join("")+
       '<option value="7">Enviado (sale del tablero)</option></select><button type="button" class="prim" data-av="mover">Mover</button><button type="button" class="link" data-av="limpiar">Quitar selección</button></div>':"")+
