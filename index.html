@@ -168,6 +168,20 @@ tfoot td:first-child{background:var(--surface-2)}
 .avtope:hover,.avtope.mov{background:var(--ink-2)}
 .avcard .fol{font-family:var(--f-num);font-size:.75rem;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:0 4px}
 .avenv{min-height:30px;padding:4px 8px;font-size:.78rem}
+.avcard{position:relative}
+.avcard .pzb{position:absolute;right:5px;bottom:5px;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink-3);cursor:pointer;font-size:.72rem;line-height:1;padding:0}
+.avcard .pzb:hover{color:var(--ink);border-color:var(--ink-3)}
+.avcard.pausa{background:repeating-linear-gradient(135deg,var(--surface) 0 10px,var(--surface-2) 10px 20px);border-left-color:#d4a017;cursor:default}
+.avcard.pausa.sel{background:var(--accent-soft)}
+.avcard .pz{display:flex;align-items:center;justify-content:space-between;gap:6px;font-weight:700;font-size:.76rem;color:#8a5a00;background:#fff4d6;border:1px solid #f0d58a;border-radius:6px;padding:2px 6px}
+.avcard .pz .link{font-size:.74rem;padding:0;min-height:0}
+.avcard .pzn{font-style:italic;color:var(--ink-2)}
+.pzc{color:#8a5a00;font-weight:700;text-transform:none;letter-spacing:0}
+.pzmot{border:0;padding:0;margin:0;display:grid;gap:8px}
+.pzmot label{display:flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.pzmot label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+#pznota{width:100%;box-sizing:border-box;font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:inherit}
+@media (prefers-color-scheme:dark){.avcard .pz{background:#3a2e10;border-color:#6b5520;color:#f0c75e}.pzc{color:#f0c75e}}
 .avcol{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;min-height:180px;max-height:72vh;transition:background .1s,border-color .1s}
 .avcol.sobre{background:var(--accent-soft);border-color:var(--accent);border-style:dashed}
 .avcab{padding:8px 10px 6px;border-bottom:1px solid var(--line);display:grid;gap:2px}
@@ -2622,7 +2636,9 @@ const fmt=new Intl.NumberFormat("es-MX",{maximumFractionDigits:0});
 const din=v=>"$"+fmt.format(Math.round(+v||0));
 const PASOS=["En espera","Surtido planta alta","Surtido planta baja","Facturación","Revisión","Listo para cargar"];
 const ENV=7, REV=5;
-let ORIG=null, rpc=null, puede=false, INI="", REC=new Map(), RP=new Map(), ENVH=0, D=null, sel=new Set(), via=new Set(), bus="", busTx="", arr=null, tD=0, MSG={t:"",mal:false};
+const IPZ='<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true" style="vertical-align:-1px"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>', IPL='<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true" style="vertical-align:-1px"><path d="M7 4l13 8-13 8z"/></svg>';
+const MOTIVOS={credito:"Pendiente por crédito",instrucciones:"Pendiente por instrucciones de entrega",producto:"No hay producto disponible",otro:"Otro"};
+let ORIG=null, rpc=null, puede=false, INI="", REC=new Map(), RP=new Map(), ENVH=0, D=null, sel=new Set(), via=new Set(), bus="", busTx="", edo="", arr=null, tD=0, MSG={t:"",mal:false};
 const loc=t=>{const d=new Date(t),z=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate())+" "+z(d.getHours())+":"+z(d.getMinutes())};
 const hoy=()=>loc(Date.now()).slice(0,10);
 const corto=f=>String(f||"").replace(/^([A-Za-z]*)0+(?=\d)/,"$1");
@@ -2663,6 +2679,7 @@ function pedidos(){
     const fol=vis.length?corto(vis[0][0])+(vis.length>1?"+"+(vis.length-1):""):"";
     const ult=pend.length?pend[pend.length-1][1]:"";
     out.push({f:p.f,c:p.c,via:D.vias[p.via]||"SIN VÍA",v:p.v,d:p.d,h:p.h,i:p.s==="R"?p.ip:p.i,tot:p.i,s:p.s,pct:p.pu?Math.round(p.su/p.pu*100):0,
+      pausa:r&&r.pm?{m:r.pm,n:r.pn,por:r.pp,f:r.pf}:null,
       etapa,auto,resto,nota,fac:fa.length>0&&!resto,fol,facs:fa.map(x=>corto(x[0])).join(", "),
       movido:auto?ult:(r&&!env?r.movido:null),por:auto?"factura":(r&&!env?r.por:null)});
   }
@@ -2670,25 +2687,29 @@ function pedidos(){
 }
 const sinAc=t=>String(t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 const filtra=l=>{const ps=sinAc(bus).split(/\s+/).filter(Boolean);
-  return l.filter(p=>{if(via.size&&!via.has(p.via)) return false; if(!ps.length) return true;
+  return l.filter(p=>{if(via.size&&!via.has(p.via)) return false; if(edo==="pausa"&&!p.pausa) return false; if(edo==="activos"&&p.pausa) return false; if(!ps.length) return true;
     const t=sinAc(p.f+" "+corto(p.f)+" "+p.c+" "+p.facs); return ps.every(w=>t.includes(w))})};
 // El filtro (vías y búsqueda) se conserva al recargar la página
 const FK="surtido_filtro";
-const guardaF=()=>{try{localStorage.setItem(FK,JSON.stringify({via:[...via],bus:busTx}))}catch(e){}};
-try{const g=JSON.parse(localStorage.getItem(FK)||"null"); if(g){via=new Set(g.via||[]); busTx=g.bus||""; bus=busTx.trim()}}catch(e){}
+const guardaF=()=>{try{localStorage.setItem(FK,JSON.stringify({via:[...via],bus:busTx,edo}))}catch(e){}};
+try{const g=JSON.parse(localStorage.getItem(FK)||"null"); if(g){via=new Set(g.via||[]); busTx=g.bus||""; bus=busTx.trim(); edo=g.edo||""}}catch(e){}
 const enviadosHoy=()=>[...REC.values()].filter(r=>r.etapa===ENV&&loc(r.movido).slice(0,10)===hoy()).length+ENVH;
 
 function tarjeta(p){
   const on=sel.has(p.f);
   const t=p.movido?(p.auto?"facturado "+esc(p.movido.slice(8,10)+"/"+p.movido.slice(5,7)+" "+p.movido.slice(11)):hace(p.movido)+(p.por?" · "+esc(String(p.por).split(" ")[0]):"")):"";
-  return '<div class="avcard'+(on?" sel":"")+(p.s==="R"?" parc":"")+'" data-f="'+esc(p.f)+'"'+(puede?' draggable="true"':"")+">"+
+  const pz=p.pausa;
+  return '<div class="avcard'+(on?" sel":"")+(p.s==="R"?" parc":"")+(pz?" pausa":"")+'" data-f="'+esc(p.f)+'"'+(puede&&!pz?' draggable="true"':"")+">"+
     '<div class="r1">'+(puede?'<input type="checkbox" data-av="sel" aria-label="Seleccionar '+esc(p.f)+'"'+(on?" checked":"")+">":"")+"<b>"+esc(corto(p.f))+"</b>"+
       (p.fol?'<span class="fol" title="'+esc(p.facs)+'">'+esc(p.fol)+"</span>":"")+'<span class="im">'+din(p.i)+"</span></div>"+
     '<div class="cl" title="'+esc(p.c)+'">'+esc(p.c)+"</div>"+
     '<div class="sm" title="'+esc(p.via)+'">'+esc(p.via)+"</div>"+
+    (pz?'<div class="pz"><span>'+IPZ+' '+esc(MOTIVOS[pz.m]||pz.m)+'</span>'+(puede?'<button type="button" class="link" data-av="reac1">Reactivar</button>':"")+"</div>"+
+      (pz.n?'<div class="sm pzn" title="'+esc(pz.n)+'">“'+esc(pz.n)+'”</div>':"")+'<div class="sm">Pausado '+hace(pz.f)+(pz.por?" · "+esc(String(pz.por).split(" ")[0]):"")+"</div>":"")+
     (p.nota?'<div class="sm" style="color:var(--bad)" title="'+esc(p.nota)+'"><b>'+esc(p.nota)+"</b></div>":"")+
-    '<div class="sm">'+(p.resto?'<span class="pc">Resto pendiente</span> · ':p.s==="R"?'<span class="pc">Parcial '+p.pct+"%</span> · ":"")+
-      (p.d?esc(p.d.slice(8,10)+"/"+p.d.slice(5,7))+(p.h?" "+esc(p.h):""):"")+(t?" · "+t:"")+"</div></div>";
+    '<div class="sm"'+(puede&&!pz?' style="padding-right:26px"':"")+">"+(p.resto?'<span class="pc">Resto pendiente</span> · ':p.s==="R"?'<span class="pc">Parcial '+p.pct+"%</span> · ":"")+
+      (p.d?esc(p.d.slice(8,10)+"/"+p.d.slice(5,7))+(p.h?" "+esc(p.h):""):"")+(t?" · "+t:"")+"</div>"+
+    (puede&&!pz?'<button type="button" class="pzb" data-av="pausa1" title="Pausar pedido" aria-label="Pausar '+esc(p.f)+'">'+IPZ+"</button>":"")+"</div>";
 }
 
 function pintar(){
@@ -2699,7 +2720,8 @@ function pintar(){
   const eh=enviadosHoy();
   const cols=PASOS.map((n,i)=>{const e=i+1, ps=l.filter(p=>p.etapa===e).sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h));
     const ns=ps.filter(p=>sel.has(p.f)).length, todosSel=ps.length&&ns===ps.length;
-    return '<div class="avcol" data-etapa="'+e+'"><div class="avcab"><span class="paso">Paso '+e+'</span><div class="t">'+esc(n)+'<span class="n">'+ps.length+"</span></div>"+
+    const np=ps.filter(p=>p.pausa).length;
+    return '<div class="avcol" data-etapa="'+e+'"><div class="avcab"><span class="paso">Paso '+e+(np?' · <span class="pzc">'+IPZ+' '+np+(np>1?" pausados":" pausado")+"</span>":"")+'</span><div class="t">'+esc(n)+'<span class="n">'+ps.length+"</span></div>"+
       '<div class="m"><span>'+din(ps.reduce((a,p)=>a+(+p.i||0),0))+"</span>"+(puede&&ps.length?'<label><input type="checkbox" data-av="todos" data-e="'+e+'"'+(todosSel?" checked":"")+"> Todos</label>":"")+"</div>"+
       (e===6?'<div class="m"><span>Enviados hoy: <b>'+eh+"</b></span>"+(puede?'<button type="button" class="prim avenv" data-av="enviar"'+(ns?"":" disabled")+">Marcar enviados"+(ns?" ("+ns+")":"")+"</button>":"")+"</div>":"")+
       '</div><div class="avlista">'+(ps.length?ps.map(tarjeta).join(""):'<div class="avvacio">Sin pedidos</div>')+"</div></div>"});
@@ -2710,6 +2732,7 @@ function pintar(){
       '<div class="campo" style="flex:1 1 260px"><span class="etq">Vía de embarque</span><button type="button" class="fbtn'+(via.size?" on":"")+'" data-av="vias" style="width:100%"><span class="v">'+
         (via.size?(via.size===1?esc([...via][0]):via.size+" vías seleccionadas"):"Todas las vías ("+todos.length+")")+"</span></button></div>"+
       '<div class="campo" style="flex:1 1 220px"><label class="etq" for="svbus">Buscar</label><input type="search" id="svbus" class="busq" placeholder="Pedido, factura o cliente" value="'+esc(busTx)+'" style="width:100%"></div>'+
+      '<div class="campo"><label class="etq" for="svedo">Mostrar</label><select id="svedo"><option value="">Todos</option><option value="activos"'+(edo==="activos"?" selected":"")+'>Solo activos</option><option value="pausa"'+(edo==="pausa"?" selected":"")+">Solo pausados ("+todos.filter(p=>p.pausa).length+")</option></select></div>"+
       (puede?'<div class="campo"><button type="button" class="btn" data-av="selall">Seleccionar todos ('+l.length+")</button></div>":"")+
     "</div>"+(via.size?'<div class="chips" style="margin-top:8px">'+[...via].sort().map(v=>'<span class="chip">'+esc(v)+' <button type="button" class="x" data-av="quitavia" data-v="'+esc(v)+'" aria-label="Quitar '+esc(v)+'">×</button></span>').join("")+"</div>":"")+
     '<p class="aviso" style="margin:8px 0 0">Pedidos sin surtir y parciales de Microsip (los surtidos, cerrados y cancelados no entran). '+
@@ -2717,7 +2740,10 @@ function pintar(){
       "Los pedidos nuevos 100% sin surtir empiezan en Surtido planta alta y los parciales en En espera. Al facturarse o remisionarse pasan solos a Revisión, con el folio de la factura (+n si son varias). Cuando la factura se agrega a una salida de Reparto el pedido sale solo del tablero (lo que no va en salida, como remisiones, se marca enviado en “Listo para cargar”); si la entrega no se logra regresa a Listo para cargar. Lo que falte de un parcial regresa a En espera.</p></section>"+
     (puede&&ns?'<div class="avsel"><b>'+ns+(ns>1?" pedidos seleccionados":" pedido seleccionado")+"</b> · "+din(l.filter(p=>sel.has(p.f)).reduce((a,p)=>a+(+p.i||0),0))+
       '<span style="margin-left:auto"></span><label for="avdest">Mover a</label><select id="avdest">'+PASOS.map((n,i)=>'<option value="'+(i+1)+'">'+(i+1)+". "+esc(n)+"</option>").join("")+
-      '<option value="7">Enviado (sale del tablero)</option></select><button type="button" class="prim" data-av="mover">Mover</button><button type="button" class="link" data-av="limpiar">Quitar selección</button></div>':"")+
+      '<option value="7">Enviado (sale del tablero)</option></select><button type="button" class="prim" data-av="mover">Mover</button>'+
+      (l.some(p=>sel.has(p.f)&&!p.pausa)?'<button type="button" class="btn" data-av="pausar">'+IPZ+' Pausar</button>':"")+
+      (l.some(p=>sel.has(p.f)&&p.pausa)?'<button type="button" class="btn" data-av="reactivar">'+IPL+' Reactivar</button>':"")+
+      '<button type="button" class="link" data-av="limpiar">Quitar selección</button></div>':"")+
     '<p class="aviso" id="avaviso" aria-live="polite" style="margin:0;min-height:1em;font-weight:600'+(MSG.mal?";color:var(--bad)":"")+'">'+esc(MSG.t)+"</p>"+
     '<div class="avbarra"><button type="button" data-av="izq" aria-label="Correr a la izquierda">◀</button><div class="avriel"><div class="avtope"></div></div><button type="button" data-av="der" aria-label="Correr a la derecha">▶</button></div>'+
     '<div class="avtab">'+cols.join("")+"</div>";
@@ -2760,17 +2786,49 @@ function selVias(){
   $("svaplicar").onclick=()=>{via=s2; guardaF(); cerrar(); pintar()};
 }
 
+// Pausar: elegir motivo (y comentario); el pedido se queda en su paso y no avanza hasta reactivarlo
+function pausar(ps){
+  if(!ps.length) return;
+  const velo=$("velo");
+  velo.innerHTML='<div class="hoja" role="dialog" aria-modal="true" aria-label="Pausar pedido"><header><h3>Pausar '+(ps.length>1?ps.length+" pedidos":"pedido "+esc(corto(ps[0].f)))+'</h3><button type="button" class="link" id="pzcerrar">Cancelar</button></header>'+
+    '<div style="padding:12px 14px;display:grid;gap:10px;overflow:auto">'+
+    (ps.length===1?'<div class="sm" style="color:var(--ink-2)">'+esc(ps[0].c)+" · "+esc(ps[0].via)+" · Paso "+ps[0].etapa+"</div>":'<div class="sm" style="color:var(--ink-2)">'+esc(ps.map(p=>corto(p.f)).join(", "))+"</div>")+
+    '<fieldset class="pzmot"><legend class="etq">Motivo</legend>'+Object.entries(MOTIVOS).map(([k,v])=>'<label><input type="radio" name="pzm" value="'+k+'"> '+esc(v)+"</label>").join("")+"</fieldset>"+
+    '<label class="etq" for="pznota">Comentario <span id="pzreq">(opcional)</span></label><textarea id="pznota" rows="3" maxlength="300" placeholder="Ej. espera autorización de Sandy; el cliente confirma dirección mañana; llega el material el viernes"></textarea>'+
+    '<p class="aviso" id="pzerr" style="margin:0;color:var(--bad);min-height:1em"></p></div>'+
+    '<div class="pie"><span></span><button type="button" class="prim" id="pzok">'+IPZ+' Pausar</button></div></div>';
+  velo.hidden=false;
+  const cerrar=()=>{velo.hidden=true; velo.innerHTML=""};
+  $("pzcerrar").onclick=cerrar; velo.onclick=e=>{if(e.target===velo) cerrar()};
+  velo.querySelectorAll('[name=pzm]').forEach(r=>r.onchange=()=>{$("pzreq").textContent=r.value==="otro"?"(obligatorio)":"(opcional)"});
+  $("pzok").onclick=async()=>{const m=(velo.querySelector('[name=pzm]:checked')||{}).value, n=$("pznota").value.trim();
+    if(!m){$("pzerr").textContent="Elige el motivo"; return}
+    if(m==="otro"&&!n){$("pzerr").textContent="Escribe el motivo de la pausa"; return}
+    $("pzok").disabled=true;
+    try{const k=await llamar("ap_pausar",{peds:ps.map(p=>({f:p.f,e:p.etapa,c:p.c,via:p.via,v:p.v,d:p.d,i:p.tot})),motivo:m,nota:n});
+      ps.forEach(p=>sel.delete(p.f)); cerrar(); aviso(k+(k>1?" pedidos pausados":" pedido pausado")+": "+MOTIVOS[m])}
+    catch(e){$("pzerr").textContent=e.message; $("pzok").disabled=false; return}
+    try{await lista()}catch(e){} pintar()};
+}
+async function reactivar(fs){
+  if(!fs.length) return;
+  try{const k=await llamar("ap_reactivar",{folios:fs}); fs.forEach(f=>sel.delete(f)); aviso(k+(k>1?" pedidos reactivados":" pedido reactivado"))}
+  catch(e){aviso("No se pudo reactivar: "+e.message,true)}
+  try{await lista()}catch(e){} pintar();
+}
+
 async function mover(folios,etapa){
   if(!folios.length) return;
-  const todos=pedidos().filter(p=>folios.includes(p.f)&&p.etapa!==etapa);
+  const todos0=pedidos().filter(p=>folios.includes(p.f)&&p.etapa!==etapa), pz=todos0.filter(p=>p.pausa), todos=todos0.filter(p=>!p.pausa);
   const bloq=todos.filter(p=>p.fac&&etapa<REV), ps=todos.filter(p=>!(p.fac&&etapa<REV));
+  if(pz.length) aviso(pz.length+(pz.length>1?" pedidos están pausados":" pedido está pausado")+": reactívalo para moverlo",true);
   if(bloq.length) aviso(bloq.length+(bloq.length>1?" pedidos ya están facturados":" pedido ya está facturado")+": no pueden regresar antes de Revisión",true);
   if(!ps.length){pintar(); return}
   for(const p of ps) REC.set(p.f,Object.assign({},REC.get(p.f)||{},{f:p.f,etapa,movido:new Date().toISOString(),por:"Tú",c:p.c,via:p.via,v:p.v,d:p.d,i:p.tot}));
   for(const p of ps) sel.delete(p.f);
   pintar();
   try{const n=await llamar("ap_mover",{peds:ps.map(p=>({f:p.f,c:p.c,via:p.via,v:p.v,d:p.d,i:p.tot})),etapa});
-    if(!bloq.length) aviso(n+(n>1?" pedidos ":" pedido ")+(etapa===ENV?(n>1?"marcados como enviados":"marcado como enviado"):(n>1?"movidos a ":"movido a ")+"“"+PASOS[etapa-1]+"”"))}
+    if(!bloq.length&&!pz.length) aviso(n+(n>1?" pedidos ":" pedido ")+(etapa===ENV?(n>1?"marcados como enviados":"marcado como enviado"):(n>1?"movidos a ":"movido a ")+"“"+PASOS[etapa-1]+"”"))}
   catch(e){aviso("No se pudo mover: "+e.message,true)}
   try{await lista()}catch(e){} pintar();
 }
@@ -2778,6 +2836,7 @@ async function mover(folios,etapa){
 function eventos(){
   const box=$("aAv");
   box.addEventListener("change",ev=>{const el=ev.target;
+    if(el.id==="svedo"){edo=el.value; guardaF(); pintar(); return}
     if(el.dataset.av==="sel"){const f=el.closest(".avcard").dataset.f; el.checked?sel.add(f):sel.delete(f); pintar(); return}
     if(el.dataset.av==="todos"){const e=+el.dataset.e, ps=filtra(pedidos()).filter(p=>p.etapa===e); for(const p of ps) el.checked?sel.add(p.f):sel.delete(p.f); pintar()}});
   box.addEventListener("input",ev=>{if(ev.target.id==="svbus"){busTx=ev.target.value; bus=busTx.trim(); guardaF(); pintar()}});
@@ -2786,6 +2845,9 @@ function eventos(){
       if(a==="selall"){for(const p of filtra(pedidos())) sel.add(p.f); pintar()}
       else if(a==="limpiar"){sel.clear(); pintar()}
       else if(a==="vias") selVias();
+      else if(a==="pausar") pausar(filtra(pedidos()).filter(p=>sel.has(p.f)&&!p.pausa));
+      else if(a==="reactivar") reactivar(filtra(pedidos()).filter(p=>sel.has(p.f)&&p.pausa).map(p=>p.f));
+      else if(a==="pausa1"||a==="reac1"){const f=b.closest(".avcard").dataset.f, p=pedidos().find(x=>x.f===f); if(p) a==="pausa1"?pausar([p]):reactivar([f])}
       else if(a==="quitavia"){via.delete(b.dataset.v); guardaF(); pintar()}
       else if(a==="mover"){mover([...sel],+$("avdest").value)}
       else if(a==="enviar"){const l=filtra(pedidos()).filter(p=>p.etapa===6&&sel.has(p.f)).map(p=>p.f); mover(l,ENV)}
@@ -2793,7 +2855,7 @@ function eventos(){
     const c=ev.target.closest(".avcard"); if(c&&puede&&!ev.target.closest("input")){const f=c.dataset.f; sel.has(f)?sel.delete(f):sel.add(f); pintar()}});
   // Arrastrar: si el pedido está seleccionado se mueven todos los seleccionados
   box.addEventListener("dragstart",ev=>{const c=ev.target.closest&&ev.target.closest(".avcard"); if(!c) return;
-    const f=c.dataset.f; arr=sel.has(f)?[...sel]:[f];
+    const f=c.dataset.f; if(c.classList.contains("pausa")){ev.preventDefault(); return} arr=sel.has(f)?[...sel]:[f];
     ev.dataTransfer.effectAllowed="move"; ev.dataTransfer.setData("text/plain",arr.join(","));
     if(arr.length>1){const g=document.createElement("div"); g.className="avcard sel"; g.style.cssText="position:absolute;top:-1000px;width:180px";
       g.innerHTML="<b>"+arr.length+" pedidos</b>"; document.body.appendChild(g); ev.dataTransfer.setDragImage(g,20,20); setTimeout(()=>g.remove(),0)}
