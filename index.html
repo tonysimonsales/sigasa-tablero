@@ -168,6 +168,7 @@ tfoot td:first-child{background:var(--surface-2)}
 .avtope:hover,.avtope.mov{background:var(--ink-2)}
 .avcard .fol{font-family:var(--f-num);font-size:.75rem;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:0 4px}
 .avenv{min-height:30px;padding:4px 8px;font-size:.78rem}
+.avcard .bo{font-size:.72rem;font-weight:700;color:var(--s2);border:1px solid var(--s2);border-radius:4px;padding:0 4px}
 .avcard{position:relative}
 .avcard .pzb{position:absolute;right:5px;bottom:5px;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink-3);cursor:pointer;font-size:.72rem;line-height:1;padding:0}
 .avcard .pzb:hover{color:var(--ink);border-color:var(--ink-3)}
@@ -2673,22 +2674,34 @@ function pedidos(){
     else if(pend.length){etapa=Math.max(r&&!env?r.etapa:0,REV); auto=!(r&&!env&&r.etapa>=REV)}
     else if(env||enRep.length){
       if(!env&&enRep.some(x=>loc(st(x).t).slice(0,10)===h)) ENVH++;
-      if(p.s==="N"||p.s==="R"){etapa=1;resto=true} else continue}
+      if(p.s==="N"||p.s==="R") backOrder(p,fa,out); continue}
     else{ if(!r&&p.s!=="N"&&p.s!=="R") continue; etapa=r?r.etapa:(p.s==="R"?1:2) } // nuevos: 100% sin surtir → planta alta; parciales → En espera
     const vis=etapa>=REV?(pend.length?pend:falla.length?falla:fa):[];
     const fol=vis.length?corto(vis[0][0])+(vis.length>1?"+"+(vis.length-1):""):"";
     const ult=pend.length?pend[pend.length-1][1]:"";
-    out.push({f:p.f,c:p.c,via:D.vias[p.via]||"SIN VÍA",v:p.v,d:p.d,h:p.h,i:p.s==="R"?p.ip:p.i,tot:p.i,s:p.s,pct:p.pu?Math.round(p.su/p.pu*100):0,
+    const pieza=p.s==="R"&&etapa>=REV&&vis.length>0;                // parcial ya facturado: esta tarjeta es lo facturado
+    out.push({f:p.f,c:p.c,via:D.vias[p.via]||"SIN VÍA",v:p.v,d:p.d,h:p.h,i:pieza?Math.max(0,p.i-p.ip):p.s==="R"?p.ip:p.i,tot:p.i,s:pieza?"F":p.s,pct:p.pu?Math.round(p.su/p.pu*100):0,
       pausa:r&&r.pm?{m:r.pm,n:r.pn,por:r.pp,f:r.pf}:null,
       etapa,auto,resto,nota,fac:fa.length>0&&!resto,fol,facs:fa.map(x=>corto(x[0])).join(", "),
       movido:auto?ult:(r&&!env?r.movido:null),por:auto?"factura":(r&&!env?r.por:null)});
+    if(pieza) backOrder(p,fa,out);                                  // y lo que falta surtir va por su lado
   }
   return out;
+}
+// Back order de un parcial: tarjeta aparte (clave "folio/BO"), sin factura; empieza en En espera y avanza sola.
+// Si después se factura algo más, esa factura sigue con la tarjeta del pedido y el back order vuelve a empezar.
+function backOrder(p,fa,out){
+  const k=p.f+"/BO", rb=REC.get(k), ultFa=fa.length?fa[fa.length-1][1]:"";
+  const vale=!!(rb&&(!ultFa||loc(rb.movido)>=ultFa));
+  if(vale&&rb.etapa===ENV) return;
+  out.push({f:k,ped:p.f,bo:true,c:p.c,via:D.vias[p.via]||"SIN VÍA",v:p.v,d:p.d,h:p.h,i:p.ip,tot:p.ip,s:"R",pct:p.pu?Math.round(p.su/p.pu*100):0,
+    pausa:rb&&rb.pm?{m:rb.pm,n:rb.pn,por:rb.pp,f:rb.pf}:null,
+    etapa:vale?rb.etapa:1,auto:false,resto:false,nota:"",fac:false,fol:"",facs:"",movido:vale?rb.movido:null,por:vale?rb.por:null});
 }
 const sinAc=t=>String(t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 const filtra=l=>{const ps=sinAc(bus).split(/\s+/).filter(Boolean);
   return l.filter(p=>{if(via.size&&!via.has(p.via)) return false; if(edo==="pausa"&&!p.pausa) return false; if(edo==="activos"&&p.pausa) return false; if(!ps.length) return true;
-    const t=sinAc(p.f+" "+corto(p.f)+" "+p.c+" "+p.facs); return ps.every(w=>t.includes(w))})};
+    const t=sinAc(p.f+" "+corto(p.f)+" "+p.c+" "+p.facs+(p.bo?" back order":"")); return ps.every(w=>t.includes(w))})};
 // El filtro (vías y búsqueda) se conserva al recargar la página
 const FK="surtido_filtro";
 const guardaF=()=>{try{localStorage.setItem(FK,JSON.stringify({via:[...via],bus:busTx,edo}))}catch(e){}};
@@ -2700,14 +2713,14 @@ function tarjeta(p){
   const t=p.movido?(p.auto?"facturado "+esc(p.movido.slice(8,10)+"/"+p.movido.slice(5,7)+" "+p.movido.slice(11)):hace(p.movido)+(p.por?" · "+esc(String(p.por).split(" ")[0]):"")):"";
   const pz=p.pausa;
   return '<div class="avcard'+(on?" sel":"")+(p.s==="R"?" parc":"")+(pz?" pausa":"")+'" data-f="'+esc(p.f)+'"'+(puede&&!pz?' draggable="true"':"")+">"+
-    '<div class="r1">'+(puede?'<input type="checkbox" data-av="sel" aria-label="Seleccionar '+esc(p.f)+'"'+(on?" checked":"")+">":"")+"<b>"+esc(corto(p.f))+"</b>"+
+    '<div class="r1">'+(puede?'<input type="checkbox" data-av="sel" aria-label="Seleccionar '+esc(p.f)+'"'+(on?" checked":"")+">":"")+"<b>"+esc(corto(p.ped||p.f))+"</b>"+(p.bo?'<span class="bo">Back order</span>':"")+
       (p.fol?'<span class="fol" title="'+esc(p.facs)+'">'+esc(p.fol)+"</span>":"")+'<span class="im">'+din(p.i)+"</span></div>"+
     '<div class="cl" title="'+esc(p.c)+'">'+esc(p.c)+"</div>"+
     '<div class="sm" title="'+esc(p.via)+'">'+esc(p.via)+"</div>"+
     (pz?'<div class="pz"><span>'+IPZ+' '+esc(MOTIVOS[pz.m]||pz.m)+'</span>'+(puede?'<button type="button" class="link" data-av="reac1">Reactivar</button>':"")+"</div>"+
       (pz.n?'<div class="sm pzn" title="'+esc(pz.n)+'">“'+esc(pz.n)+'”</div>':"")+'<div class="sm">Pausado '+hace(pz.f)+(pz.por?" · "+esc(String(pz.por).split(" ")[0]):"")+"</div>":"")+
     (p.nota?'<div class="sm" style="color:var(--bad)" title="'+esc(p.nota)+'"><b>'+esc(p.nota)+"</b></div>":"")+
-    '<div class="sm"'+(puede&&!pz?' style="padding-right:26px"':"")+">"+(p.resto?'<span class="pc">Resto pendiente</span> · ':p.s==="R"?'<span class="pc">Parcial '+p.pct+"%</span> · ":"")+
+    '<div class="sm"'+(puede&&!pz?' style="padding-right:26px"':"")+">"+(p.bo?'<span class="pc">Falta surtir '+(100-p.pct)+"%</span> · ":p.s==="F"?'<span class="pc">Facturado parcial</span> · ':p.s==="R"?'<span class="pc">Parcial '+p.pct+"%</span> · ":"")+
       (p.d?esc(p.d.slice(8,10)+"/"+p.d.slice(5,7))+(p.h?" "+esc(p.h):""):"")+(t?" · "+t:"")+"</div>"+
     (puede&&!pz?'<button type="button" class="pzb" data-av="pausa1" title="Pausar pedido" aria-label="Pausar '+esc(p.f)+'">'+IPZ+"</button>":"")+"</div>";
 }
