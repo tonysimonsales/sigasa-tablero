@@ -150,6 +150,34 @@ tfoot td:first-child{background:var(--surface-2)}
 .tabs button{flex:none;white-space:nowrap;border:0;background:none;padding:10px 14px;font-family:var(--f-display);font-size:1.05rem;font-weight:600;color:var(--ink-3);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
 .tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 .pestana{display:grid;gap:14px;min-width:0}
+/* Dirección */
+#pDir .dres{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+#pDir .dres .cifra.principal{grid-column:span 2}
+@media (max-width:980px){#pDir .dres{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){#pDir .dres{grid-template-columns:1fr}#pDir .dres .cifra.principal{grid-column:auto}}
+#pDir .meta{height:10px;background:var(--line-soft);border-radius:5px;position:relative;overflow:visible;margin:6px 0 2px}
+#pDir .meta b{display:block;height:100%;border-radius:5px;background:var(--s1)}
+#pDir .meta i{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink-2);border-radius:1px}
+#pDir .meta.proy b{background:repeating-linear-gradient(135deg,var(--s1) 0 6px,transparent 6px 10px);opacity:.55;position:absolute;top:0;left:0}
+#pDir .up{color:var(--ok,#1a7f37)} #pDir .down{color:var(--bad)}
+#pDir .graf svg{width:100%;height:auto;display:block}
+#pDir .graf text{font-family:var(--f-num);font-size:11px;fill:var(--ink-3)}
+#pDir .graf .bar{fill:var(--s1)} #pDir .graf .bar.act{fill:var(--s1);opacity:.55}
+#pDir .graf .mg{fill:var(--ink)} #pDir .graf .meta-l{stroke:var(--bad);stroke-dasharray:5 4;stroke-width:1.5}
+#pDir .dos{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+#pDir .dos>*{min-width:0}
+@media (max-width:900px){#pDir .dos{grid-template-columns:1fr}}
+#pDir h3{font-size:.95rem;margin:4px 0 8px}
+#pDir table{min-width:0}
+#pDir tbody tr{cursor:default}
+#pDir .hb{display:grid;gap:6px}
+#pDir .hb .r{display:grid;grid-template-columns:minmax(90px,170px) 1fr 120px;gap:10px;align-items:center;font-size:.85rem}
+#pDir .hb .r .lb{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#pDir .hb .r .tr{height:14px;background:var(--line-soft);border-radius:3px;overflow:hidden}
+#pDir .hb .r .tr b{display:block;height:100%;background:var(--s1)}
+#pDir .hb .r .vl{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums}
+#pDir .hb .r.mal .tr b{background:var(--bad)}
+#pDir .nota{font-size:.8rem;color:var(--ink-3);margin:8px 0 0}
 .pestana>*{min-width:0}
 /* Avance de pedidos (funnel) */
 .avbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:end}
@@ -507,6 +535,7 @@ input.busq{flex:1 1 220px;min-width:0}
     <div class="corte" id="corte">Cargando datos…</div>
   </header>
   <nav class="tabs" role="tablist" aria-label="Secciones">
+    <button type="button" role="tab" id="tabG" aria-selected="false" aria-controls="pDir" hidden>Dirección</button>
     <button type="button" role="tab" id="tabR" aria-selected="true" aria-controls="pVisitas">Visitas</button>
     <button type="button" role="tab" id="tabV" aria-selected="false" aria-controls="pVentas">Ventas</button>
     <button type="button" role="tab" id="tabC" aria-selected="false" aria-controls="pCobranza">Cobranza</button>
@@ -516,6 +545,7 @@ input.busq{flex:1 1 220px;min-width:0}
     <button type="button" role="tab" id="tabD" aria-selected="false" aria-controls="pDevol" hidden>Devoluciones <span class="badge" id="dbadge" hidden></span></button>
     <button type="button" role="tab" id="tabU" aria-selected="false" aria-controls="pUso" hidden>Uso</button>
   </nav>
+  <div id="pDir" class="pestana" role="tabpanel" aria-labelledby="tabG" hidden><div class="cargando">Cargando…</div></div>
   <div id="pVentas" class="pestana" role="tabpanel" aria-labelledby="tabV">
 
   <section class="panel controles" aria-label="Periodo y filtros">
@@ -1017,7 +1047,7 @@ const dec=(v,n)=>v==null||!isFinite(v)?"—":v.toFixed(n);
 const mesTxt=m=>{const[y,mm]=m.split("-");return MESN[+mm-1]+" "+y};
 
 /* Pestañas */
-const tabs=[["tabV","pVentas"],["tabC","pCobranza"],["tabR","pVisitas"],["tabA","pAlmacen"],["tabX","pCxp"],["tabE","pReparto"],["tabD","pDevol"],["tabU","pUso"]];
+const tabs=[["tabG","pDir"],["tabV","pVentas"],["tabC","pCobranza"],["tabR","pVisitas"],["tabA","pAlmacen"],["tabX","pCxp"],["tabE","pReparto"],["tabD","pDevol"],["tabU","pUso"]];
 let prom=null; const asegurar=()=>prom||(prom=cargar());
 function mostrar(id){
   for(const [t,p] of tabs){const on=t===id;$(t).setAttribute("aria-selected",on);$(p).hidden=!on}
@@ -1027,6 +1057,7 @@ function mostrar(id){
   if(id==="tabU"&&window.PANEL.uso) window.PANEL.uso();
   if(id==="tabA"&&window.PANEL.almacen) window.PANEL.almacen();
   if(id==="tabX"&&window.PANEL.cxp) window.PANEL.cxp();
+  if(id==="tabG"&&window.PANEL.direccion) window.PANEL.direccion();
   if(id==="tabD"&&window.PANEL.devoluciones) window.PANEL.devoluciones();
   if(id==="tabE"&&window.PANEL.reparto) window.PANEL.reparto();
   ponerCorte();
@@ -2934,5 +2965,97 @@ window.PANEL.avanceIniciar=async(r)=>{
     try{if(Date.now()-tD>15*6e4) await datos(true); await lista(); pintar()}catch(e){}},60000);
   return true;
 };
+})();
+</script>
+<script>
+// Dirección (solo perfiles con ve_direccion): resumen del negocio — ventas contra meta, margen estimado,
+// inventario, cuentas por cobrar y por pagar. Datos: direccion.json (paquete "d:todos").
+(function(){
+const $=s=>document.getElementById(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const MES=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const f0=new Intl.NumberFormat("es-MX",{maximumFractionDigits:0}), f1=new Intl.NumberFormat("es-MX",{maximumFractionDigits:1,minimumFractionDigits:1});
+const din=v=>(v<0?"−$":"$")+f0.format(Math.abs(Math.round(v||0)));
+const mill=v=>"$"+(Math.abs(v)>=1e6?f1.format(v/1e6)+" M":f0.format(Math.round(v/1e3))+" mil");
+const pct=(a,b)=>b?(a/b*100):0;
+const pc=x=>f1.format(x)+"%";
+const nm=m=>MES[+m.slice(5,7)-1]+" "+m.slice(2,4);
+const dif=(a,b)=>{if(!b) return ""; const d=(a-b)/Math.abs(b)*100; return '<span class="'+(d>=0?"up":"down")+'">'+(d>=0?"▲ ":"▼ ")+f1.format(Math.abs(d))+"%</span>"};
+let D=null, prom=null;
+const sec=(t,body,id)=>'<section class="panel desg"'+(id?' id="'+id+'"':"")+'><div class="ghead"><h2>'+t+"</h2></div>"+body+"</section>";
+const tabla=(cab,filas,pie)=>'<div class="tabla-w"><table><thead><tr>'+cab.map(c=>"<th>"+c+"</th>").join("")+"</tr></thead><tbody>"+
+  filas.map(f=>"<tr>"+f.map((x,i)=>i?'<td class="n">'+x+"</td>":"<td>"+x+"</td>").join("")+"</tr>").join("")+"</tbody>"+(pie?"<tfoot><tr>"+pie.map((x,i)=>i?'<td class="n">'+x+"</td>":"<td>"+x+"</td>").join("")+"</tr></tfoot>":"")+"</table></div>";
+const barras=(l,mal)=>{const mx=Math.max(...l.map(r=>Math.abs(r[1])),1);
+  return '<div class="hb">'+l.map(r=>'<div class="r'+(mal&&mal(r)?" mal":"")+'"><span class="lb" title="'+esc(r[0])+'">'+esc(r[0])+'</span><span class="tr"><b style="width:'+(Math.abs(r[1])/mx*100).toFixed(1)+'%"></b></span><span class="vl">'+(r[2]||din(r[1]))+"</span></div>").join("")+"</div>"};
+
+function grafica(){
+  const n=13, ms=D.meses.slice(-n), v=D.v.slice(-n), cs=D.cos.slice(-n), W=760, H=230, L=8, B=34, T=22;
+  const mx=Math.max(D.meta*1.08,...v)*1.02, bw=(W-L*2)/n, y=x=>T+(H-T-B)*(1-x/mx);
+  let g='<svg viewBox="0 0 '+W+" "+H+'" role="img" aria-label="Ventas netas de los últimos 13 meses contra la meta">';
+  ms.forEach((m,i)=>{const x=L+i*bw+bw*.15, w=bw*.7, h=y(0)-y(v[i]), act=i===n-1;
+    g+='<rect class="bar'+(act?" act":"")+'" x="'+x.toFixed(1)+'" y="'+y(v[i]).toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+Math.max(0,h).toFixed(1)+'" rx="3"><title>'+nm(m)+": "+din(v[i])+" · margen est. "+pc(pct(v[i]-cs[i],v[i]))+"</title></rect>";
+    g+='<text x="'+(x+w/2).toFixed(1)+'" y="'+(H-18)+'" text-anchor="middle">'+nm(m)+"</text>";
+    g+='<text x="'+(x+w/2).toFixed(1)+'" y="'+(y(v[i])-5).toFixed(1)+'" text-anchor="middle" class="mg">'+f1.format(v[i]/1e6)+"</text>";
+    g+='<text x="'+(x+w/2).toFixed(1)+'" y="'+(H-4)+'" text-anchor="middle">'+(v[i]?f0.format(pct(v[i]-cs[i],v[i]))+"%":"")+"</text>"});
+  g+='<line class="meta-l" x1="'+L+'" x2="'+(W-L)+'" y1="'+y(D.meta).toFixed(1)+'" y2="'+y(D.meta).toFixed(1)+'"/><text x="'+(W-L)+'" y="'+(y(D.meta)-5).toFixed(1)+'" text-anchor="end" style="fill:var(--bad)">Meta '+f1.format(D.meta/1e6)+" M</text></svg>";
+  return '<div class="graf">'+g+'</div><p class="nota">Millones de pesos sin IVA. Abajo de cada mes: margen bruto estimado. El mes actual (claro) va al '+D.corte.slice(8,10)+" "+MES[+D.corte.slice(5,7)-1]+".</p>";
+}
+
+function pintar(){
+  const box=$("pDir"), i=D.meses.length-1, v=D.v[i], cs=D.cos[i], [hb,ht]=D.hab, proy=hb?v/hb*ht:0;
+  const ant=D.v[i-12], mg=pct(v-cs,v), mgp=pct(D.v[i-1]-D.cos[i-1],D.v[i-1]);
+  const cxc=D.cxc, cxp=D.cxp, inv=D.inv;
+  const mesN=MES[+D.meses[i].slice(5,7)-1];
+  let h='<section class="dres">'+
+    '<div class="cifra principal"><div class="k">Ventas de '+mesN+" (al "+(+D.corte.slice(8,10))+")</div>"+
+      '<div class="m">'+din(v)+'</div><div class="meta"><b style="width:'+Math.min(100,pct(v,D.meta)).toFixed(1)+'%"></b></div>'+
+      '<div class="ref">'+pc(pct(v,D.meta))+" de la meta de "+mill(D.meta)+" · día hábil "+hb+" de "+ht+"</div>"+
+      '<div class="ref">Proyección al cierre: <b>'+din(proy)+"</b> ("+pc(pct(proy,D.meta))+" de la meta) · "+(proy>=D.meta?'<span class="up">alcanza la meta</span>':'<span class="down">faltan '+din(D.meta-proy)+"</span>")+"</div></div>"+
+    '<div class="cifra"><div class="k">Margen bruto estimado</div><div class="m">'+pc(mg)+'</div><div class="ref">utilidad bruta '+din(v-cs)+" · mes anterior "+pc(mgp)+"</div></div>"+
+    '<div class="cifra"><div class="k">'+nm(D.meses[i-12])+' completo</div><div class="m">'+din(ant)+'</div><div class="ref">mes anterior: '+din(D.v[i-1])+" "+dif(D.v[i-1],D.v[i-13])+"</div></div>"+
+    '<div class="cifra"><div class="k">Por cobrar (CxC)</div><div class="m">'+din(cxc.saldo)+'</div><div class="ref">vencido '+din(cxc.vencido)+" ("+pc(pct(cxc.vencido,cxc.saldo))+")"+(cxc.dso?" · "+f0.format(cxc.dso)+" días de cobro":"")+"</div></div>"+
+    '<div class="cifra"><div class="k">Por pagar (CxP)</div><div class="m">'+din(cxp.saldo)+'</div><div class="ref">vencido '+din(cxp.vencido)+" · vence en 7 días "+din(cxp.sem[1])+"</div></div>"+
+    '<div class="cifra"><div class="k">Inventario a costo</div><div class="m">'+din(inv.total)+'</div><div class="ref">'+(inv.dias?f0.format(inv.dias)+" días de venta · ":"")+"sin movimiento "+din(inv.sinmov_total)+"</div></div>"+
+    '<div class="cifra"><div class="k">Cobrado / Compras del mes</div><div class="m">'+din(D.cob[i])+'</div><div class="ref">compras '+din(D.comp[i])+" (sin IVA)</div></div>"+
+    "</section>";
+  // 2) Resultados
+  const filas=[]; for(let k=i;k>=Math.max(0,i-12);k--) filas.push([nm(D.meses[k]),din(D.v[k]),din(D.cos[k]),din(D.v[k]-D.cos[k]),pc(pct(D.v[k]-D.cos[k],D.v[k])),pc(pct(D.v[k],D.meta)),din(D.vve[k]),din(D.vpv[k]),din(D.comp[k]),din(D.cob[k])]);
+  h+=sec("Ventas y margen",grafica()+
+    tabla(["Mes","Ventas netas","Costo est.","Utilidad bruta","Margen","De la meta","Facturas","Mostrador","Compras","Cobrado"],filas)+
+    '<p class="nota">Costo de ventas <b>estimado</b> con el costo actual de cada artículo (existencias), así que en meses viejos el margen sale un poco más bajo de lo real. Gastos y utilidad neta: siguiente fase, con la contabilidad de Microsip.</p>',"dventas");
+  // 3) Ventas: vendedores, grupos, clientes
+  const vt=D.vendedores.reduce((a,r)=>a+r[1],0), vtp=D.vendedores.reduce((a,r)=>a+r[3],0);
+  h+=sec("Ventas de "+mesN+" por vendedor y por grupo",'<div class="dos"><div><h3>Vendedores</h3>'+
+    tabla(["Vendedor","Ventas","Margen","Mismo periodo "+D.meses[i-12].slice(0,4),"Cambio"],D.vendedores.map(r=>[esc(r[0]),din(r[1]),pc(pct(r[1]-r[2],r[1])),din(r[3]),dif(r[1],r[3])]),["Total",din(vt),"",din(vtp),dif(vt,vtp)])+
+    '</div><div><h3>Grupos de línea</h3>'+tabla(["Grupo","Ventas","Margen","Prom. 3 meses","Margen 3m"],D.grupos.map(r=>[esc(r[0]),din(r[1]),pc(pct(r[1]-r[2],r[1])),din(r[3]),pc(pct(r[3]-r[4],r[3]))]))+"</div></div>"+
+    '<p class="nota">“Mismo periodo”: del 1 al '+(+D.corte.slice(8,10))+" de "+nm(D.meses[i-12])+".</p>","dvend");
+  h+=sec("Clientes",'<div class="dos"><div><h3>Los que más compran en '+mesN+"</h3>"+tabla(["Cliente","Ventas","Margen"],D.clientes.map(r=>[esc(r[0]),din(r[1]),pc(pct(r[1]-r[2],r[1]))]))+
+    '</div><div><h3>Dejaron de comprar ('+D.n_perdidos+")</h3>"+tabla(["Cliente","Compraba al mes","Última compra"],D.perdidos.map(r=>[esc(r[0]),din(r[1]),r[2]?(+r[2].slice(8,10))+" "+MES[+r[2].slice(5,7)-1]+" "+r[2].slice(2,4):"—"]))+
+    '<p class="nota">Compraban en promedio $5,000 o más al mes y llevan 60 días sin comprar. Juntos compraban '+din(D.imp_perdidos)+" al mes.</p></div></div>","dcli");
+  // 4) Inventario
+  h+=sec("Inventario",'<div class="dos"><div><h3>Por grupo de línea</h3>'+barras(inv.grupos)+'<h3 style="margin-top:14px">Por almacén</h3>'+barras(inv.almacenes)+
+    '</div><div><h3>Sin movimiento en 6 meses: '+din(inv.sinmov_total)+" ("+f0.format(inv.sinmov_n)+" artículos)</h3>"+
+    tabla(["Artículo","Existencia","Valor","Última salida"],inv.sinmov.map(r=>['<span class="cl">'+esc(r[0])+"</span> "+esc(r[1]),f0.format(r[2]),din(r[3]),r[4]?nm(r[4]):"antes de 2023"]))+"</div></div>"+
+    "<h3 style=\"margin-top:14px\">Se acaban pronto: de los que más se venden, existencia para menos de 15 días ("+inv.bajos_n+")</h3>"+
+    tabla(["Artículo","Existencia","Vendido 90 días","Alcanza para","Venta al mes (costo)"],inv.bajos.map(r=>['<span class="cl">'+esc(r[0])+"</span> "+esc(r[1]),f0.format(r[2]),f0.format(r[3]),f1.format(r[4])+" días",din(r[5])]))+
+    '<p class="nota">Valor a costo de Microsip. Días de venta: inventario entre el costo de lo vendido por día (promedio de los últimos 3 meses).</p>',"dinv");
+  // 5) Dinero
+  const semL=["Vencido","Esta semana","En 1 semana","En 2 semanas","En 3 semanas","Después"];
+  h+=sec("Cuentas por cobrar y por pagar",'<div class="dos"><div><h3>Por cobrar: antigüedad de saldos</h3>'+
+    barras(cxc.tramos.map((t,j)=>[t==="Por vencer"?t:t+" días",cxc.t[j]]),r=>r[0]!=="Por vencer")+
+    '</div><div><h3>Por pagar: vencimientos</h3>'+barras(semL.map((t,j)=>[t,cxp.sem[j]]),r=>r[0]==="Vencido")+
+    '<h3 style="margin-top:14px">Proveedores con más saldo</h3>'+tabla(["Proveedor","Saldo","Vencido"],cxp.top.map(r=>[esc(r[0]),din(r[1]),r[2]?din(r[2]):"—"]))+"</div></div>"+
+    (cxp.ppago.length?"<h3 style=\"margin-top:14px\">Descuentos por pronto pago vigentes</h3>"+tabla(["Proveedor","Factura","Saldo","Pagar antes del","Descuento","Ahorro"],cxp.ppago.map(r=>[esc(r[0]),esc(r[1]),din(r[2]),(+r[3].slice(8,10))+" "+MES[+r[3].slice(5,7)-1],pc(r[4]),din(r[5])])):""),"ddin");
+  box.innerHTML=h;
+}
+async function cargar(){
+  if(window.FUENTE&&window.FUENTE.direccion) D=await window.FUENTE.direccion();
+  else{const r=await fetch("direccion.json"); if(!r.ok) throw new Error("No hay datos de dirección."); D=await r.json()}
+  pintar();
+}
+window.PANEL=window.PANEL||{};
+window.PANEL.direccion=()=>prom||(prom=cargar().catch(e=>{$("pDir").innerHTML='<div class="cargando">'+esc(e.message)+"</div>"}));
+// Página sin usuario (Panel de Ventas de Tony): la pestaña aparece si existe direccion.json
+if(!window.FUENTE) fetch("direccion.json",{method:"HEAD"}).then(r=>{if(r.ok) $("tabG").hidden=false}).catch(()=>{});
 })();
 </script>
