@@ -7,6 +7,10 @@ const SUPABASE_URL="https://mmmoczqrhczbwpuniwhl.supabase.co";
 const SUPABASE_KEY="sb_publishable_ms4-fK5dTOmzYsSc2OSaug_Entkniww"; // llave pública: no da acceso sin usuario
 const DOMINIO="@panel.sigasa.com.mx";
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
+// Supabase entrega máximo 1,000 renglones por consulta: pide página por página hasta traer todo
+async function todas(q){let out=[];
+  for(let a=0;;a+=1000){const {data,error}=await q().range(a,a+999); if(error) return {data:null,error}; out=out.concat(data||[]); if(!data||data.length<1000) break}
+  return {data:out,error:null}}
 const $=s=>document.getElementById(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -166,7 +170,7 @@ async function cargarDescartes(){
   descartes=new Map(); await perfil;
   const desde=new Date(Date.now()-DIAS_DESCARTE*864e5).toISOString();
   const {data:{user}}=await sb.auth.getUser();
-  const {data,error}=await sb.from("sugerencias_descartadas").select("cliente_id,articulo_id,creado").eq("user_id",user.id).gte("creado",desde);
+  const {data,error}=await todas(()=>sb.from("sugerencias_descartadas").select("cliente_id,articulo_id,creado").eq("user_id",user.id).gte("creado",desde).order("cliente_id").order("articulo_id"));
   if(error){descartes.local=true; return descartes}
   for(const r of data) descartes.set(r.cliente_id+":"+r.articulo_id,r.creado);
   return descartes;
@@ -225,7 +229,7 @@ async function reporteUso(){
 async function cargarUso(){
   const v=$("uper").value, dias=+v, h=new Date(); h.setHours(0,0,0,0);
   const desde=v==="m"?new Date(h.getFullYear(),h.getMonth(),1):new Date(h.getTime()-(dias===0?0:dias===1?1:dias-1)*864e5);
-  const {data,error}=await sb.rpc("reporte_uso",{desde:desde.toISOString()});
+  const {data,error}=await todas(()=>sb.rpc("reporte_uso",{desde:desde.toISOString()}));
   if(error){$("uresumen").innerHTML='<div class="cargando">No se pudo cargar el uso: '+esc(error.message)+"</div>";return}
   let filas=data; if(dias===1) filas=filas.map(r=>r.inicio&&new Date(r.inicio)>=h?Object.assign({},r,{sesion:null,inicio:null,segundos:null}):r);
   const por=new Map();
