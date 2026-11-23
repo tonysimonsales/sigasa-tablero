@@ -192,7 +192,7 @@ tfoot td:first-child{background:var(--surface-2)}
 .avcab .m{display:flex;justify-content:space-between;align-items:center;font-size:.78rem;color:var(--ink-2)}
 .avcab label{display:inline-flex;gap:4px;align-items:center;cursor:pointer}
 .avlista{overflow-y:auto;padding:8px;display:grid;gap:6px;align-content:start;flex:1}
-.avcard{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:8px;padding:7px 8px;font-size:.82rem;cursor:grab;display:grid;gap:2px;user-select:none}
+.avcard{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:8px;padding:7px 8px;font-size:.82rem;cursor:pointer;display:grid;gap:2px;user-select:none}
 .avcard:active{cursor:grabbing}
 .avcard.sel{border-color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft)}
 .avcard.parc{border-left-color:var(--s2)}
@@ -1543,6 +1543,8 @@ function ficha(p){
   velo.hidden=false; const c=()=>{velo.hidden=true;velo.innerHTML=""};
   $("acerrar").onclick=c; velo.onclick=e=>{if(e.target===velo)c()};
 }
+// Para Almacén · Surtido: misma ficha del pedido (con los datos que tenga cargados Surtido)
+window.ALM_FICHA=(f,DD)=>{const src=DD||D; const p=src&&src.pedidos.find(x=>x.f===f); if(!p) return false; const old=D; D=src; try{ficha(p)}finally{D=old} return true};
 })();
 </script>
 <script>
@@ -2773,7 +2775,7 @@ function pintar(){
       (puede?'<div class="campo"><button type="button" class="btn" data-av="selall">Seleccionar todos ('+l.length+")</button></div>":"")+
     "</div>"+(via.size?'<div class="chips" style="margin-top:8px">'+[...via].sort().map(v=>'<span class="chip">'+esc(v)+' <button type="button" class="x" data-av="quitavia" data-v="'+esc(v)+'" aria-label="Quitar '+esc(v)+'">×</button></span>').join("")+"</div>":"")+
     '<p class="aviso" style="margin:8px 0 0">Pedidos sin surtir y parciales de Microsip (los surtidos, cerrados y cancelados no entran). '+
-      (puede?"Arrastra un pedido a otro paso, o marca varios y arrástralos juntos (o usa “Mover a”). ":"")+
+      "Dale clic a un pedido para ver su detalle. "+(puede?"Arrastra un pedido a otro paso, o marca varios con su casilla y arrástralos juntos (o usa “Mover a”). ":"")+
       "Los pedidos nuevos 100% sin surtir empiezan en Surtido planta alta y los parciales en En espera. Al facturarse o remisionarse pasan solos a Revisión, con el folio de la factura (+n si son varias). Cuando la factura se agrega a una salida de Reparto el pedido sale solo del tablero (lo que no va en salida, como remisiones, se marca enviado en “Listo para cargar”); si la entrega no se logra regresa a Listo para cargar. Lo que falte de un parcial regresa a En espera.</p></section>"+
     (puede&&ns?'<div class="avsel"><b>'+ns+(ns>1?" pedidos seleccionados":" pedido seleccionado")+"</b> · "+din(l.filter(p=>sel.has(p.f)).reduce((a,p)=>a+(+p.i||0),0))+
       '<span style="margin-left:auto"></span><label for="avdest">Mover a</label><select id="avdest">'+PASOS.map((n,i)=>'<option value="'+(i+1)+'">'+(i+1)+". "+esc(n)+"</option>").join("")+
@@ -2889,7 +2891,9 @@ function eventos(){
       else if(a==="mover"){mover([...sel],+$("avdest").value)}
       else if(a==="enviar"){const l=filtra(pedidos()).filter(p=>p.etapa===6&&sel.has(p.f)).map(p=>p.f); mover(l,ENV)}
       return}
-    const c=ev.target.closest(".avcard"); if(c&&puede&&!ev.target.closest("input")){const f=c.dataset.f; sel.has(f)?sel.delete(f):sel.add(f); pintar()}});
+    // Clic en la tarjeta: ficha del pedido (igual que en Pedidos). Para seleccionar, la casilla.
+    const c=ev.target.closest(".avcard"); if(c&&!ev.target.closest("input,button,label")){const f=c.dataset.f.replace(/\/BO$/,"");
+      if(!(window.ALM_FICHA&&window.ALM_FICHA(f,D))) aviso("Este pedido ya no viene en los datos de Microsip ("+corto(f)+")",true)}});
   // Arrastrar: si el pedido está seleccionado se mueven todos los seleccionados
   box.addEventListener("dragstart",ev=>{const c=ev.target.closest&&ev.target.closest(".avcard"); if(!c) return;
     const f=c.dataset.f; if(c.classList.contains("pausa")){ev.preventDefault(); return} arr=sel.has(f)?[...sel]:[f];
