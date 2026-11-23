@@ -1563,7 +1563,14 @@ let rpc=null, rol="", vista="nueva", lista=[], grupos=[], prom=null;
 const F={cli:null,art:null,fac:null,facs:[],lineas:[],fija:false};
 const puede=r=>r.includes(rol), alm=()=>puede(["admin","almacen"]);
 
-async function llamar(fn,args){const {data,error}=await rpc(fn,args||{}); if(error) throw new Error(error.message); return data}
+async function llamar(fn,args){const {data,error}=await rpc(fn,args||{}); if(error) throw new Error(error.message);
+  // Supabase entrega máximo 1,000 renglones por consulta: si llegan 1,000 se piden las páginas siguientes
+  if(!Array.isArray(data)||data.length<1000) return data;
+  let out=data;
+  for(let a=1000;;a+=1000){const b=rpc(fn,args||{}); if(!b||typeof b.range!=="function") break;
+    const r=await b.range(a,a+999); if(r.error) throw new Error(r.error.message); out=out.concat(r.data||[]); if(!r.data||r.data.length<1000) break}
+  if(out.length&&out[0]&&out[0].id!==undefined){const v=new Set(); out=out.filter(x=>!v.has(x.id)&&v.add(x.id))}
+  return out}
 function aviso(m){const a=$("aviso");a.textContent=m;a.hidden=false;clearTimeout(aviso.t);aviso.t=setTimeout(()=>a.hidden=true,3500)}
 
 window.PANEL=window.PANEL||{};
@@ -2116,7 +2123,14 @@ const escribe=()=>rol==="admin"||rol==="almacen"||!!(C&&C.opera);
 const editor=()=>!!(C&&C.editor);
 const X=(a,attrs,t)=>'<button type="button" class="rx" data-a="'+a+'" '+attrs+' title="'+t+'" aria-label="'+t+'">✕</button>';
 
-async function llamar(fn,args){const {data,error}=await rpc(fn,args||{}); if(error) throw new Error(error.message); return data}
+async function llamar(fn,args){const {data,error}=await rpc(fn,args||{}); if(error) throw new Error(error.message);
+  // Supabase entrega máximo 1,000 renglones por consulta: si llegan 1,000 se piden las páginas siguientes
+  if(!Array.isArray(data)||data.length<1000) return data;
+  let out=data;
+  for(let a=1000;;a+=1000){const b=rpc(fn,args||{}); if(!b||typeof b.range!=="function") break;
+    const r=await b.range(a,a+999); if(r.error) throw new Error(r.error.message); out=out.concat(r.data||[]); if(!r.data||r.data.length<1000) break}
+  if(out.length&&out[0]&&out[0].id!==undefined){const v=new Set(); out=out.filter(x=>!v.has(x.id)&&v.add(x.id))}
+  return out}
 function aviso(m){const a=$("aviso");a.textContent=m;a.hidden=false;clearTimeout(aviso.t);aviso.t=setTimeout(()=>a.hidden=true,3500)}
 
 window.PANEL=window.PANEL||{};
@@ -2648,7 +2662,14 @@ const hoy=()=>loc(Date.now()).slice(0,10);
 const corto=f=>String(f||"").replace(/^([A-Za-z]*)0+(?=\d)/,"$1");
 const hace=t=>{if(!t) return ""; const m=Math.round((Date.now()-new Date(t))/6e4); return m<1?"ahora":m<60?"hace "+m+" min":m<1440?"hace "+Math.floor(m/60)+" h":"hace "+Math.floor(m/1440)+" d"};
 const aviso=(t,mal)=>{MSG={t,mal}; const a=$("avaviso"); if(a){a.textContent=t; a.style.color=mal?"var(--bad)":""} clearTimeout(aviso.t); aviso.t=setTimeout(()=>{MSG={t:"",mal:false}; const b=$("avaviso"); if(b) b.textContent=""},7000)};
-async function llamar(fn,args){const {data,error}=await rpc(fn,args||{}); if(error) throw new Error(error.message); return data}
+async function llamar(fn,args){const {data,error}=await rpc(fn,args||{}); if(error) throw new Error(error.message);
+  // Supabase entrega máximo 1,000 renglones por consulta: si llegan 1,000 se piden las páginas siguientes
+  if(!Array.isArray(data)||data.length<1000) return data;
+  let out=data;
+  for(let a=1000;;a+=1000){const b=rpc(fn,args||{}); if(!b||typeof b.range!=="function") break;
+    const r=await b.range(a,a+999); if(r.error) throw new Error(r.error.message); out=out.concat(r.data||[]); if(!r.data||r.data.length<1000) break}
+  if(out.length&&out[0]&&out[0].id!==undefined){const v=new Set(); out=out.filter(x=>!v.has(x.id)&&v.add(x.id))}
+  return out}
 
 async function lista(){const r=await llamar("ap_lista"); puede=!!r.puede_mover; INI=r.inicio||""; REC=new Map((r.pedidos||[]).map(x=>[x.f,x]));
   RP=new Map((r.reparto||[]).map(x=>[String(x[0]).trim(),{e:x[1],t:x[2],m:x[3]}]))}
