@@ -2612,20 +2612,23 @@ async function accion(a,el){
 })();
 </script>
 <script>
-// Reparto: flecha en cada sección para contraer o expandir (se recuerda en este navegador)
-(()=>{const box=document.getElementById("ecuerpo"); if(!box) return;
-  const K="reparto_plegadas"; let P; try{P=new Set(JSON.parse(localStorage.getItem(K)||"[]"))}catch(e){P=new Set()}
+// Secciones plegables: flecha a la derecha del título para contraer o expandir (se recuerda en este navegador)
+// Reparto: todas sus secciones. Almacén · Pedidos: "Por vía de embarque".
+function plegables(box,K,sel){ if(!box) return;
+  let P; try{P=new Set(JSON.parse(localStorage.getItem(K)||"[]"))}catch(e){P=new Set()}
   const guarda=()=>{try{localStorage.setItem(K,JSON.stringify([...P]))}catch(e){}};
   const clave=h=>h.textContent.replace(/\(\d+\)/g,"").replace(/\s+/g," ").trim();
   const flecha='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
-  const decora=()=>box.querySelectorAll("section.panel>.ghead").forEach(g=>{const h=g.querySelector("h2"); if(!h) return;
+  const decora=()=>box.querySelectorAll(sel).forEach(g=>{const h=g.querySelector("h2"); if(!h) return;
     const sec=g.parentElement, k=clave(h); sec.classList.toggle("plegado",P.has(k));
     let b=g.querySelector(".plegar"); if(!b){b=document.createElement("button"); b.type="button"; b.className="plegar"; b.innerHTML=flecha; g.appendChild(b)}
     b.dataset.k=k; b.title=P.has(k)?"Expandir":"Contraer"; b.setAttribute("aria-expanded",P.has(k)?"false":"true")});
   new MutationObserver(decora).observe(box,{childList:true,subtree:true}); decora();
-  box.addEventListener("click",ev=>{const b=ev.target.closest(".plegar"); if(!b) return; ev.stopPropagation();
+  box.addEventListener("click",ev=>{const b=ev.target.closest(".plegar"); if(!b||!box.contains(b)) return; ev.stopPropagation();
     const k=b.dataset.k; P.has(k)?P.delete(k):P.add(k); guarda(); decora()},true);
-})();
+}
+plegables(document.getElementById("ecuerpo"),"reparto_plegadas","section.panel>.ghead");
+plegables(document.getElementById("aPed"),"almacen_plegadas","#aviaspanel>.ghead");
 </script>
 <script>
 // Almacén · Surtido: pedidos que avanzan por 6 pasos de izquierda a derecha; se arrastran uno o varios.
