@@ -2257,7 +2257,7 @@ function formSalida(){
     '<div class="fila"><div class="campo"><label class="etq" for="nfecha">Fecha</label><input type="date" id="nfecha" class="fecha" value="'+(N.fecha||HOY())+'"></div>'+
     '<div class="campo"><label class="etq" for="nveh">Vehículo</label><select id="nveh">'+opt(C.vehiculos,N.veh,"Elige…")+"</select></div>"+
     '<div class="campo" style="flex:1 1 200px"><label class="etq" for="ncho">Chofer</label><select id="ncho" style="width:100%">'+opt(C.choferes,N.cho,"Elige…")+"</select></div></div>"+
-    '<label class="rchk ptchk"><input type="checkbox" id="npt"'+(ptAuto()?" checked":"")+'> <b>Va al almacén de porteo de Cancún</b> <span class="sub2">(la recibe Alan Bermudes; se marca sola si todas las facturas son de Cancún, Playa o Tulum)</span></label>'+
+    '<label class="rchk ptchk"><input type="checkbox" id="npt"'+(ptAuto()?" checked":"")+'> <b>Va al almacén de porteo de Cancún</b> <span class="sub2">(la recibe Alan Bermudes; se marca sola si alguna factura es de Cancún, Playa del Carmen o Tulum)</span></label>'+
     '<div class="campo"><label class="etq" for="nfol">Agregar factura (folio)</label><div class="fila"><input type="search" id="nfol" class="busq" placeholder="Ej. 184169 o L00184169" autocomplete="off" inputmode="text"><button type="button" class="btn" data-a="agregar">Agregar</button></div></div>'+
     (N.items.length?'<div class="rlista">'+N.items.map((i,k)=>'<div class="rpr"><div><b>'+(k+1)+". "+esc(i.folio)+"</b> · "+(i.cliente?esc(i.cliente)+" "+pago(i)+'<div class="sub2">'+esc(i.via||"")+" · "+din(i.total)+"</div>":'<span class="rojo">aún no está en los datos; se completa en la siguiente carga</span>')+
       '</div><button type="button" class="btn" data-a="qitem" data-k="'+k+'" aria-label="Quitar">✕</button></div>').join("")+"</div>"+
@@ -2286,7 +2286,7 @@ async function agregarFolio(q){
   guardarForm(); pintar(); const i=$("nfol"); if(i){i.value="";i.focus()}
 }
 function guardarForm(){if($("nfecha")){N.fecha=$("nfecha").value;N.veh=$("nveh").value;N.cho=$("ncho").value} if($("npt")) N.pt=$("npt").checked}
-function ptAuto(){if(N.ptMan||(N.pt!=null&&N.ptN===N.items.length)) return N.pt; const a=N.items.length>0&&N.items.every(i=>VIAS_PT.includes(String(i.via||"").toUpperCase())); N.pt=a; N.ptN=N.items.length; return a}
+function ptAuto(){if(N.ptMan||(N.pt!=null&&N.ptN===N.items.length)) return N.pt; const a=N.items.some(i=>VIAS_PT.includes(String(i.via||"").toUpperCase())); N.pt=a; N.ptN=N.items.length; return a}
 
 /* ---------- Hoja de carga (imprimible) ---------- */
 function hoja(s){
