@@ -2203,7 +2203,7 @@ function reprogramadas(){const u=ultimas(); return ENT.filter(e=>e.resultado==="
 
 /* ---------- Pintado general ---------- */
 function pintar(){
-  const V=rol==="cyc"?[["evid","Evidencias"]]:rol==="porteo"?[["porteo","Porteo Cancún"]]:[["salidas","Salidas"],["recibir","Recepción"],["noent","No entregados"],["evid","Evidencias"]].concat(PT?[["porteo","Porteo Cancún"]]:[]);
+  const V=rol==="cyc"?[["evid","Evidencias"]]:rol==="porteo"?[["porteo","Porteo Cancún"]]:[["salidas","Salidas"]].concat(PT?[["porteo","Porteo Cancún"]]:[],[["recibir","Recepción"],["noent","No entregados"],["evid","Evidencias"]]);
   const nR=enRuta().length+ptRegPend().length, nN=sinDecision().length;
   $("evistas").innerHTML=V.map(([k,t])=>'<button type="button" data-v="'+k+'" aria-pressed="'+(vista===k)+'">'+t+
     (k==="recibir"&&nR?" ("+nR+")":k==="noent"&&nN?" ("+nN+")":k==="porteo"&&ptCuenta()?" ("+ptCuenta()+")":"")+"</button>").join("");
