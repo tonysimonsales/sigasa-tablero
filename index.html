@@ -2356,7 +2356,7 @@ async function guardarRec(id){
 
 /* ---------- No entregados ---------- */
 function vNoEnt(){
-  const sd=sinDecision(), rp=reprogramadas(), can=ENT.filter(e=>e.resultado==="no_entregada"&&e.decision==="cancelar"&&dias(e.decision_fecha)<=30);
+  const sd=sinDecision(), rp=reprogramadas(), can=ENT.filter(e=>e.resultado==="no_entregada"&&e.decision==="cancelar"&&dias(e.decision_fecha)<=7);
   const card=(e,acc)=>{const s=salida(e.salida_id);
     return '<div class="rcard r-no_entregada"><div class="top"><b>'+esc(e.folio)+" · "+esc(e.cliente||"")+"</b>"+pago(e)+"</div>"+
       '<div class="sub2"><b>'+esc(e.motivo||"")+"</b>"+(e.comentario?" · “"+esc(e.comentario)+"”":"")+"</div>"+
@@ -2367,7 +2367,7 @@ function vNoEnt(){
       ' · aparece en "Por repartir" al registrar una salida.'+(escribe()?' <button type="button" class="link" data-a="cancelar" data-e="'+e.id+'">Cancelar entrega</button> '+X("xdec",'data-e="'+e.id+'"',"Deshacer la reprogramación"):"")+"</div>";
   return '<section class="panel"><div class="ghead"><h2>Sin decisión ('+sd.length+")</h2></div>"+(sd.length?'<div class="rlista">'+sd.sort((a,b)=>salida(a.salida_id).fecha.localeCompare(salida(b.salida_id).fecha)).map(e=>card(e,accSD)).join("")+"</div>":'<div class="vacio">Todas las no entregadas tienen decisión.</div>')+"</section>"+
     '<section class="panel"><div class="ghead"><h2>Reprogramadas, esperando salir ('+rp.length+")</h2></div>"+(rp.length?'<div class="rlista">'+rp.map(e=>card(e,accRP)).join("")+"</div>":'<div class="vacio">Ninguna.</div>')+"</section>"+
-    (can.length?'<section class="panel"><div class="ghead"><h2>Canceladas (30 días)</h2></div><div class="rlista">'+can.map(e=>card(e,e=>'<div class="sub2">Canceló '+esc(e.decision_por)+" el "+fH(e.decision_fecha)+(e.decision_comentario?" · “"+esc(e.decision_comentario)+"”":"")+(editor()?" "+X("xdec",'data-e="'+e.id+'"',"Deshacer la cancelación"):"")+"</div>")).join("")+"</div></section>":"")+
+    (can.length?'<section class="panel"><div class="ghead"><h2>Canceladas (últimos 7 días)</h2></div><div class="rlista">'+can.map(e=>card(e,e=>'<div class="sub2">Canceló '+esc(e.decision_por)+" el "+fH(e.decision_fecha)+(e.decision_comentario?" · “"+esc(e.decision_comentario)+"”":"")+(editor()?" "+X("xdec",'data-e="'+e.id+'"',"Deshacer la cancelación"):"")+"</div>")).join("")+"</div></section>":"")+
     '<p class="aviso">Cancelar entrega: la factura ya no se va a entregar; cancélala en Microsip o registra la devolución en la pestaña Devoluciones.</p>';
 }
 
