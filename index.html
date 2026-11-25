@@ -197,7 +197,7 @@ tfoot td:first-child{background:var(--surface-2)}
 .avcard .fol{font-family:var(--f-num);font-size:.75rem;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:0 4px}
 .avenv{min-height:30px;padding:4px 8px;font-size:.78rem}
 .rtag.pt{border-color:#0e7490;color:#0e7490}
-.ptchk{margin:8px 0;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
+.ptchk{margin:10px 0;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;padding:8px 10px;border:1px dashed #0e7490;border-radius:8px;background:color-mix(in srgb,#0e7490 6%,transparent)}
 .avcard .bo{font-size:.72rem;font-weight:700;color:var(--s2);border:1px solid var(--s2);border-radius:4px;padding:0 4px}
 .avcard{position:relative}
 .avcard .pzb{position:absolute;right:5px;bottom:5px;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink-3);cursor:pointer;font-size:.72rem;line-height:1;padding:0}
@@ -2257,11 +2257,11 @@ function formSalida(){
     '<div class="fila"><div class="campo"><label class="etq" for="nfecha">Fecha</label><input type="date" id="nfecha" class="fecha" value="'+(N.fecha||HOY())+'"></div>'+
     '<div class="campo"><label class="etq" for="nveh">Vehículo</label><select id="nveh">'+opt(C.vehiculos,N.veh,"Elige…")+"</select></div>"+
     '<div class="campo" style="flex:1 1 200px"><label class="etq" for="ncho">Chofer</label><select id="ncho" style="width:100%">'+opt(C.choferes,N.cho,"Elige…")+"</select></div></div>"+
+    '<label class="rchk ptchk"><input type="checkbox" id="npt"'+(ptAuto()?" checked":"")+'> <b>Va al almacén de porteo de Cancún</b> <span class="sub2">(la recibe Alan Bermudes; se marca sola si todas las facturas son de Cancún, Playa o Tulum)</span></label>'+
     '<div class="campo"><label class="etq" for="nfol">Agregar factura (folio)</label><div class="fila"><input type="search" id="nfol" class="busq" placeholder="Ej. 184169 o L00184169" autocomplete="off" inputmode="text"><button type="button" class="btn" data-a="agregar">Agregar</button></div></div>'+
     (N.items.length?'<div class="rlista">'+N.items.map((i,k)=>'<div class="rpr"><div><b>'+(k+1)+". "+esc(i.folio)+"</b> · "+(i.cliente?esc(i.cliente)+" "+pago(i)+'<div class="sub2">'+esc(i.via||"")+" · "+din(i.total)+"</div>":'<span class="rojo">aún no está en los datos; se completa en la siguiente carga</span>')+
       '</div><button type="button" class="btn" data-a="qitem" data-k="'+k+'" aria-label="Quitar">✕</button></div>').join("")+"</div>"+
       '<div class="rres"><span><b>'+N.items.length+"</b> facturas</span><span>Total <b>"+din(tot)+"</b></span>"+(cont?"<span>Contado por cobrar <b>"+din(cont)+"</b></span>":"")+"</div>":'<div class="vacio">Escribe o escanea los folios, o agrégalos de la lista de abajo.</div>')+
-    (N.items.length?'<label class="rchk ptchk"><input type="checkbox" id="npt"'+(ptAuto()?" checked":"")+'> Va al almacén de porteo de Cancún <span class="sub2">(la recibe Alan Bermudes; se marca sola si todas son de Cancún, Playa o Tulum)</span></label>':"")+
     '<div class="acc"><button type="button" class="prim" data-a="guardarsal"'+(N.items.length?"":" disabled")+'>Registrar salida ('+N.items.length+')</button></div>'+
     '<div class="rpor"><div class="ghead"><h2>Por repartir</h2><select id="nvia" aria-label="Vía de embarque"><option value="">Todas las vías ('+PR.filter(p=>!ya.has(p.folio)).length+')</option>'+
       vias.map(v=>'<option'+(v===N.via?" selected":"")+">"+esc(v)+"</option>").join("")+"</select></div>"+
@@ -2286,7 +2286,7 @@ async function agregarFolio(q){
   guardarForm(); pintar(); const i=$("nfol"); if(i){i.value="";i.focus()}
 }
 function guardarForm(){if($("nfecha")){N.fecha=$("nfecha").value;N.veh=$("nveh").value;N.cho=$("ncho").value} if($("npt")) N.pt=$("npt").checked}
-function ptAuto(){if(N.pt!=null&&N.ptN===N.items.length) return N.pt; const a=N.items.length>0&&N.items.every(i=>VIAS_PT.includes(String(i.via||"").toUpperCase())); N.pt=a; N.ptN=N.items.length; return a}
+function ptAuto(){if(N.ptMan||(N.pt!=null&&N.ptN===N.items.length)) return N.pt; const a=N.items.length>0&&N.items.every(i=>VIAS_PT.includes(String(i.via||"").toUpperCase())); N.pt=a; N.ptN=N.items.length; return a}
 
 /* ---------- Hoja de carga (imprimible) ---------- */
 function hoja(s){
@@ -2738,6 +2738,7 @@ function enlazar(){
   });
   const nf=$("nfol"); if(nf) nf.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();agregarFolio(nf.value)}};
   const nv=$("nvia"); if(nv) nv.onchange=()=>{guardarForm();N.via=nv.value;pintar()};
+  const np=$("npt"); if(np) np.onchange=()=>{N.pt=np.checked;N.ptMan=true};
   box.querySelectorAll('[id^="rn_"],[id^="ru_"],[id^="kobs_"],[id^="kdobs_"],#relobs,[id^="pt_"]').forEach(x=>{if(NT[x.id]!=null) x.value=NT[x.id]; x.oninput=()=>{NT[x.id]=x.value}});
 }
 async function accion(a,el){
@@ -2745,7 +2746,7 @@ async function accion(a,el){
   if(a.startsWith("pt")) return accionPT(a,el);
   try{
     switch(a){
-      case"nueva": N.abierta=true; N.items=[]; N.fecha=HOY(); pintar();
+      case"nueva": N.abierta=true; N.items=[]; N.fecha=HOY(); N.pt=null; N.ptMan=false; pintar();
         try{PR=await llamar("rp_por_repartir",{dias:10})}catch(e){PR=[]} pintar(); setTimeout(()=>$("nfol")&&$("nfol").focus(),30); return;
       case"cerrarnueva": N.abierta=false; pintar(); return;
       case"agregar": return agregarFolio($("nfol").value);
@@ -2759,7 +2760,7 @@ async function accion(a,el){
         el.disabled=true;
         const id=await llamar("rp_crear_salida",{d:{fecha:N.fecha,vehiculo:N.veh,chofer:N.cho,folios:N.items.map(i=>i.folio)}});
         if(N.pt) try{await llamar("rp_pt_marcar",{sal:id,si:true})}catch(e){aviso("La salida se registró, pero no se pudo marcar como porteo: "+e.message)}
-        const pt=N.pt; N.abierta=false; N.items=[]; N.pt=null; aviso(pt?"Salida registrada · va al almacén de Cancún":"Salida registrada"); await cargar(); pintar(); const s=salida(id); if(s) hoja(s); return}
+        const pt=N.pt; N.abierta=false; N.items=[]; N.pt=null; N.ptMan=false; aviso(pt?"Salida registrada · va al almacén de Cancún":"Salida registrada"); await cargar(); pintar(); const s=salida(id); if(s) hoja(s); return}
       case"hoja": return hoja(salida(sid));
       case"xsal": case"xent": case"xreab": case"xdec": case"xrel": case"xrelf": case"xconf": return correccion(a,el);
       case"cansal": if(!confirm("¿Cancelar esta salida? Las facturas vuelven a quedar por repartir.")) return;
