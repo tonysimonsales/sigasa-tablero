@@ -196,6 +196,8 @@ tfoot td:first-child{background:var(--surface-2)}
 .avtope:hover,.avtope.mov{background:var(--ink-2)}
 .avcard .fol{font-family:var(--f-num);font-size:.75rem;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:0 4px}
 .avenv{min-height:30px;padding:4px 8px;font-size:.78rem}
+.rtag.pt{border-color:#0e7490;color:#0e7490}
+.ptchk{margin:8px 0;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
 .avcard .bo{font-size:.72rem;font-weight:700;color:var(--s2);border:1px solid var(--s2);border-radius:4px;padding:0 4px}
 .avcard{position:relative}
 .avcard .pzb{position:absolute;right:5px;bottom:5px;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink-3);cursor:pointer;font-size:.72rem;line-height:1;padding:0}
@@ -2147,7 +2149,9 @@ const fD=s=>{if(!s)return"—";const d=new Date(s.length<=10?s+"T12:00:00":s);re
 const fH=s=>{if(!s)return"";const d=new Date(s);return fD(s)+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
 const dias=s=>s?Math.max(0,Math.round((new Date(HOY()+"T12:00:00")-new Date((s.length<=10?s+"T12:00:00":s)))/864e5)):0;
 const pago=e=>e.contado===true?'<span class="rtag c">Contado</span>':e.contado===false?'<span class="rtag">Crédito</span>':"";
-let rpc=null, rol="", C=null, SAL=[], ENT=[], PR=[], REL=null, CP=null, vista="salidas", sub="p", recib=null, prom=null;
+let rpc=null, rol="", C=null, SAL=[], ENT=[], PR=[], REL=null, CP=null, PT=null, vista="salidas", sub="p", recib=null, prom=null;
+let ptRecibir=null, ptReg=null; const ptSel=new Set(), ptMarca=new Map(), ptCambio=new Map(); // Porteo Cancún
+const VIAS_PT=["REPARTO CANCUN","REPARTO PLAYA DEL CARMEN","REPARTO TULUM"];
 const unchk=new Set(), NT={}; // partidas de una relación desmarcadas (no llegaron) y textos escritos
 const N={abierta:false,fecha:"",veh:"",cho:"",items:[],via:""};
 const borr=new Map(); // borradores de la recepción (no entregada sin motivo)
@@ -2169,41 +2173,45 @@ function aviso(m){const a=$("aviso");a.textContent=m;a.hidden=false;clearTimeout
 window.PANEL=window.PANEL||{};
 // La pestaña aparece solo si Supabase ya tiene las funciones (supabase/15_reparto.sql) y el rol puede verla
 window.PANEL.repartoIniciar=(fRpc,r)=>{rpc=fRpc; rol=r; if(window.PANEL.permite&&!window.PANEL.permite("reparto")) return Promise.resolve(false);
-  return llamar("rp_catalogos").then(c=>{C=c; $("tabE").hidden=false; if(c.como_cyc) rol="cyc"; if(rol==="cyc"){vista="evid";sub="c"} return cargar().then(()=>true)}).catch(()=>false)};
+  return llamar("rp_catalogos").then(c=>{C=c; $("tabE").hidden=false; if(c.como_cyc) rol="cyc"; if(rol==="cyc"){vista="evid";sub="c"} return cargar().then(()=>true)})
+    .catch(()=>llamar("rp_pt_lista").then(p=>{PT=p; rol="porteo"; vista="porteo"; $("tabE").hidden=false; return cargar().then(()=>true)}).catch(()=>false))};
 window.PANEL.reparto=()=>prom||(prom=Promise.resolve().then(()=>{$("ebusb").onclick=buscarFactura;$("ebus").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();buscarFactura()}};pintar()}));
 
 async function cargar(){
+  if(rol==="porteo"){PT=await llamar("rp_pt_lista"); ptPintarBadge(); return}
   const desde=iso(new Date(Date.now()-45*864e5));
   let c2; [SAL,ENT,c2,REL]=await Promise.all([llamar("rp_salidas_lista",{desde}),llamar("rp_entregas_lista",{desde}),llamar("rp_catalogos").catch(()=>null),
     llamar("rp_rel_lista",{desde:iso(new Date(Date.now()-30*864e5))}).catch(()=>null)]);
   if(REL) REL=REL.map(r=>Object.assign(r,{items:r.items||[]})).filter(r=>r.items.length);
   try{CP=await llamar("rp_carteras_pend")}catch(e){CP=null}
+  if(rol!=="cyc") try{PT=await llamar("rp_pt_lista")}catch(e){PT=null}
   if(c2) C=c2; window.RP_ACT=C&&C.actualizado||null; if(window.ponerCorte) window.ponerCorte();
-  const pend=rol==="cyc"?relsPend("cyc").length+(CP||[]).length+relsPendCart(true).length:misCart().length?relsPendCart(true).length:SAL.filter(s=>s.estado==="en_ruta").length+sinDecision().length+relsPend("archivo").length;
+  const pend=rol==="cyc"?relsPend("cyc").length+(CP||[]).length+relsPendCart(true).length:misCart().length?relsPendCart(true).length:enRuta().length+sinDecision().length+relsPend("archivo").length+ptRegPend().length;
   const b=$("ebadge"); b.textContent=pend; b.hidden=!pend;
 }
 const salida=id=>SAL.find(s=>s.id===id);
 const deSalida=id=>ENT.filter(e=>e.salida_id===id).sort((a,b)=>a.orden-b.orden);
-const enRuta=()=>SAL.filter(s=>s.estado==="en_ruta");
+const enRuta=()=>SAL.filter(s=>s.estado==="en_ruta"&&!s.porteo);
+const ptPend=e=>{const s=salida(e.salida_id); return !!(s&&s.porteo&&!e.pt_mer_fecha)}; // factura en manos de Cancún
 // La última entrega de cada folio (para saber si una no entregada ya volvió a salir)
 function ultimas(){const m=new Map();
   for(const e of ENT){const s=salida(e.salida_id); if(!s||s.estado==="cancelada") continue;
     const k=e.folio, p=m.get(k); if(!p||salida(p.salida_id).creado<s.creado) m.set(k,e)} return m}
 const intentos=f=>ENT.filter(e=>e.folio===f&&salida(e.salida_id)&&salida(e.salida_id).estado!=="cancelada").length;
-function sinDecision(){const u=ultimas(); return ENT.filter(e=>e.resultado==="no_entregada"&&!e.decision&&u.get(e.folio)===e)}
+function sinDecision(){const u=ultimas(); return ENT.filter(e=>e.resultado==="no_entregada"&&!e.decision&&u.get(e.folio)===e&&!ptPend(e))}
 function reprogramadas(){const u=ultimas(); return ENT.filter(e=>e.resultado==="no_entregada"&&e.decision==="reprogramar"&&u.get(e.folio)===e)}
 
 /* ---------- Pintado general ---------- */
 function pintar(){
-  const V=rol==="cyc"?[["evid","Evidencias"]]:[["salidas","Salidas"],["recibir","Recepción"],["noent","No entregados"],["evid","Evidencias"]];
-  const nR=enRuta().length, nN=sinDecision().length;
+  const V=rol==="cyc"?[["evid","Evidencias"]]:rol==="porteo"?[["porteo","Porteo Cancún"]]:[["salidas","Salidas"],["recibir","Recepción"],["noent","No entregados"],["evid","Evidencias"]].concat(PT?[["porteo","Porteo Cancún"]]:[]);
+  const nR=enRuta().length+ptRegPend().length, nN=sinDecision().length;
   $("evistas").innerHTML=V.map(([k,t])=>'<button type="button" data-v="'+k+'" aria-pressed="'+(vista===k)+'">'+t+
-    (k==="recibir"&&nR?" ("+nR+")":k==="noent"&&nN?" ("+nN+")":"")+"</button>").join("");
+    (k==="recibir"&&nR?" ("+nR+")":k==="noent"&&nN?" ("+nN+")":k==="porteo"&&ptCuenta()?" ("+ptCuenta()+")":"")+"</button>").join("");
   $("evistas").hidden=V.length<2;
-  $("evistas").querySelectorAll("button").forEach(b=>b.onclick=()=>{vista=b.dataset.v;recib=null;sel.clear();pintar()});
+  $("evistas").querySelectorAll("button").forEach(b=>b.onclick=()=>{vista=b.dataset.v;recib=null;ptRecibir=null;ptReg=null;sel.clear();pintar()});
   const box=$("ecuerpo");
   if(vista==="salidas") box.innerHTML=vSalidas(); else if(vista==="recibir") box.innerHTML=vRecibir();
-  else if(vista==="noent") box.innerHTML=vNoEnt(); else box.innerHTML=vEvid();
+  else if(vista==="noent") box.innerHTML=vNoEnt(); else if(vista==="porteo") box.innerHTML=vPorteo(); else box.innerHTML=vEvid();
   enlazar();
 }
 async function refrescar(){try{await cargar()}catch(e){aviso(e.message)} pintar()}
@@ -2215,7 +2223,7 @@ function vSalidas(){
     if(!N.abierta) h+='<div class="acc"><button type="button" class="prim" data-a="nueva">Nueva salida</button></div>';
     else h+=formSalida();
   }
-  const er=enRuta();
+  const er=SAL.filter(s=>s.estado==="en_ruta");
   h+='<section class="panel"><div class="ghead"><h2>En ruta</h2></div>'+(er.length?'<div class="rlista">'+er.map(tarjSalida).join("")+"</div>":'<div class="vacio">No hay camionetas en ruta.</div>')+"</section>";
   const rec=SAL.filter(s=>s.estado==="recibida"&&dias(s.fecha)<=7);
   if(rec.length) h+='<section class="panel"><div class="ghead"><h2>Recibidas (últimos 7 días)</h2></div><div class="rlista">'+rec.map(tarjSalida).join("")+"</div></section>";
@@ -2232,12 +2240,12 @@ function tarjSalida(s){
     :es.length+" facturas"+(cont?" · contado por cobrar "+din(cont):"")+" · registró "+esc(s.creado_por||"")+" "+fH(s.creado);
   const sigue=es.some(e=>e.decision)||(REL||[]).some(r=>r.items.some(i=>es.some(e=>e.id===i.entrega_id)));
   const xs=editor()||(escribe()&&s.estado==="en_ruta"&&es.every(e=>!e.resultado));
-  return '<div class="rcard"><div class="top"><b>'+esc(s.vehiculo)+" · "+esc(s.chofer)+'</b><span class="rtop"><span class="sub2">'+fD(s.fecha)+"</span>"+(xs?X("xsal",'data-s="'+s.id+'"',"Eliminar salida"):"")+"</span></div>"+
+  return '<div class="rcard"><div class="top"><b>'+esc(s.vehiculo)+" · "+esc(s.chofer)+'</b>'+(s.porteo?' <span class="rtag pt">Porteo Cancún'+(s.estado==="en_ruta"?(s.pt_recibida_fecha?" · en Cancún":" · en camino"):"")+"</span>":"")+'<span class="rtop"><span class="sub2">'+fD(s.fecha)+"</span>"+(xs?X("xsal",'data-s="'+s.id+'"',"Eliminar salida"):"")+"</span></div>"+
     '<div class="sub2">'+lin+"</div>"+
     (editor()&&s.estado==="recibida"?es.map(e=>'<div class="rxrow"><span><b>'+esc(e.folio)+"</b> · "+esc(e.cliente||"")+" · "+(e.resultado==="no_entregada"?"No entregada ("+esc(e.motivo)+")":e.resultado==="parcial"?"Parcial":"Entregada")+"</span>"+X("xent",'data-e="'+e.id+'"',"Quitar de la salida")+"</div>").join(""):"")+
     '<div class="acc"><button type="button" class="btn" data-a="hoja" data-s="'+s.id+'">Hoja de carga</button>'+
-    (s.estado==="en_ruta"&&escribe()?'<button type="button" class="prim" data-a="recibir" data-s="'+s.id+'">Recibir chofer</button>':"")+
-    (s.estado==="recibida"&&(editor()||(escribe()&&!sigue))?'<button type="button" class="rxb" data-a="xreab" data-s="'+s.id+'">Reabrir recepción</button>':"")+"</div></div>";
+    (s.estado==="en_ruta"&&escribe()&&!s.porteo?'<button type="button" class="prim" data-a="recibir" data-s="'+s.id+'">Recibir chofer</button>':"")+
+    (s.estado==="recibida"&&!s.porteo&&(editor()||(escribe()&&!sigue))?'<button type="button" class="rxb" data-a="xreab" data-s="'+s.id+'">Reabrir recepción</button>':"")+"</div></div>";
 }
 function formSalida(){
   const opt=(l,v,ph)=>'<option value="">'+ph+"</option>"+l.map(x=>'<option'+(x===v?" selected":"")+">"+esc(x)+"</option>").join("");
@@ -2253,6 +2261,7 @@ function formSalida(){
     (N.items.length?'<div class="rlista">'+N.items.map((i,k)=>'<div class="rpr"><div><b>'+(k+1)+". "+esc(i.folio)+"</b> · "+(i.cliente?esc(i.cliente)+" "+pago(i)+'<div class="sub2">'+esc(i.via||"")+" · "+din(i.total)+"</div>":'<span class="rojo">aún no está en los datos; se completa en la siguiente carga</span>')+
       '</div><button type="button" class="btn" data-a="qitem" data-k="'+k+'" aria-label="Quitar">✕</button></div>').join("")+"</div>"+
       '<div class="rres"><span><b>'+N.items.length+"</b> facturas</span><span>Total <b>"+din(tot)+"</b></span>"+(cont?"<span>Contado por cobrar <b>"+din(cont)+"</b></span>":"")+"</div>":'<div class="vacio">Escribe o escanea los folios, o agrégalos de la lista de abajo.</div>')+
+    (N.items.length?'<label class="rchk ptchk"><input type="checkbox" id="npt"'+(ptAuto()?" checked":"")+'> Va al almacén de porteo de Cancún <span class="sub2">(la recibe Alan Bermudes; se marca sola si todas son de Cancún, Playa o Tulum)</span></label>':"")+
     '<div class="acc"><button type="button" class="prim" data-a="guardarsal"'+(N.items.length?"":" disabled")+'>Registrar salida ('+N.items.length+')</button></div>'+
     '<div class="rpor"><div class="ghead"><h2>Por repartir</h2><select id="nvia" aria-label="Vía de embarque"><option value="">Todas las vías ('+PR.filter(p=>!ya.has(p.folio)).length+')</option>'+
       vias.map(v=>'<option'+(v===N.via?" selected":"")+">"+esc(v)+"</option>").join("")+"</select></div>"+
@@ -2276,7 +2285,8 @@ async function agregarFolio(q){
   }catch(e){aviso(e.message)}
   guardarForm(); pintar(); const i=$("nfol"); if(i){i.value="";i.focus()}
 }
-function guardarForm(){if($("nfecha")){N.fecha=$("nfecha").value;N.veh=$("nveh").value;N.cho=$("ncho").value}}
+function guardarForm(){if($("nfecha")){N.fecha=$("nfecha").value;N.veh=$("nveh").value;N.cho=$("ncho").value} if($("npt")) N.pt=$("npt").checked}
+function ptAuto(){if(N.pt!=null&&N.ptN===N.items.length) return N.pt; const a=N.items.length>0&&N.items.every(i=>VIAS_PT.includes(String(i.via||"").toUpperCase())); N.pt=a; N.ptN=N.items.length; return a}
 
 /* ---------- Hoja de carga (imprimible) ---------- */
 function hoja(s){
@@ -2297,7 +2307,10 @@ function vRecibir(){
   const er=enRuta();
   if(!recib||!salida(recib)||salida(recib).estado!=="en_ruta"){
     recib=null;
-    return '<section class="panel"><div class="ghead"><h2>Camionetas en ruta</h2></div>'+(er.length?'<div class="rlista">'+er.map(tarjSalida).join("")+"</div>":'<div class="vacio">No hay camionetas en ruta.</div>')+"</section>";
+    if(ptReg) return vPtRecibirMerida();
+    const rp=ptRegPend();
+    return '<section class="panel"><div class="ghead"><h2>Camionetas en ruta</h2></div>'+(er.length?'<div class="rlista">'+er.map(tarjSalida).join("")+"</div>":'<div class="vacio">No hay camionetas en ruta.</div>')+"</section>"+
+      (PT?'<section class="panel"><div class="ghead"><h2>Reportes de regreso de Cancún ('+rp.length+")</h2></div>"+(rp.length?'<div class="rlista">'+rp.map(g=>tarjRegreso(g,true)).join("")+"</div>":'<div class="vacio">No hay reportes de Cancún por recibir.</div>')+"</section>":"");
   }
   const s=salida(recib), es=deSalida(s.id), r=resumenSalida(es), falt=es.filter(e=>!e.resultado).length, sinG=es.filter(e=>borr.has(e.id)).length;
   return '<section class="panel"><div class="ghead"><h2>Recibir: '+esc(s.vehiculo)+" · "+esc(s.chofer)+'</h2><button type="button" class="link" data-a="volver">Volver</button></div>'+
@@ -2441,7 +2454,7 @@ function estDest(e,d){
   const f=its.filter(x=>x.i.estado==="faltante").sort((a,b)=>(b.i.confirmado_fecha||"").localeCompare(a.i.confirmado_fecha||""))[0];
   return {d,st:"falta",rel:f&&f.r.folio,nota:f&&f.i.nota};
 }
-function pendEnviar(){if(!REL) return []; return ENT.filter(e=>(e.resultado==="entregada"||e.resultado==="parcial")&&(estDest(e,"cyc").st==="falta"||estDest(e,"archivo").st==="falta"))}
+function pendEnviar(){if(!REL) return []; return ENT.filter(e=>(e.resultado==="entregada"||e.resultado==="parcial")&&!ptPend(e)&&(estDest(e,"cyc").st==="falta"||estDest(e,"archivo").st==="falta"))}
 function relsPend(d){return (REL||[]).filter(r=>r.items.some(i=>i.destino===d&&i.estado==="pendiente"))}
 
 
@@ -2473,6 +2486,13 @@ function historial(h){
     if(!h.es_reparto){est="No es de reparto";cls="esp";extra="Vía de embarque: "+esc(f.via||"sin vía")+"; no pasa por las camionetas."}
     else if(h.inicio&&f.fecha<h.inicio){est="Anterior al arranque de Reparto";cls="esp";extra="Se facturó el "+fD(f.fecha)+"; Reparto cuenta desde el "+fD(h.inicio)+"."}
     else{est="Por repartir";cls="va";extra="Facturada el "+fD(f.fecha)+"; todavía no sale en ninguna camioneta."}}
+  else if(u.s_porteo&&!u.pt_mer_fecha){cls="va";
+    const rg=u.pt_reg;
+    if(!u.s_pt_recibida_fecha){est="En camino al almacén de Cancún";extra="Salió el "+fD(u.s_fecha)+" en "+esc(u.s_vehiculo)+" con "+esc(u.s_chofer)+"; la recibe Alan Bermudes (porteo)."}
+    else if(rg){est="De regreso a Mérida en "+esc(rg.folio);extra="Cancún: "+(u.resultado==="no_entregada"?"entrega cancelada":u.resultado==="parcial"?"entregada parcial":"entregada")+"; falta que la reciban en Mérida."}
+    else if(!u.resultado){est="En el almacén de Cancún, por entregar";extra="Llegó a Cancún el "+fD(u.s_pt_recibida_fecha)+" (recibió "+esc(u.s_pt_recibida_por||"")+")."}
+    else if(u.resultado==="no_entregada"&&u.decision!=="cancelar"){est="Cancún: no entregada, se vuelve a intentar";cls="esp";extra="Motivo: "+esc(u.motivo)+(u.comentario?' · "'+esc(u.comentario)+'"':"")+"."}
+    else{est="Cancún: "+(u.resultado==="no_entregada"?"entrega cancelada":u.resultado==="parcial"?"entregada parcial":"entregada")+", falta mandarla a Mérida";cls=u.resultado==="no_entregada"?"mal":"ok"}}
   else if(!u.resultado){est="En ruta";cls="va";extra="Salió el "+fD(u.s_fecha)+" en "+esc(u.s_vehiculo)+" con "+esc(u.s_chofer)+"."}
   else if(u.resultado==="no_entregada"){
     if(u.decision==="reprogramar"){est="Reprogramada, esperando salir";cls="esp";extra="No se entregó ("+esc(u.motivo)+"); reprogramada al "+fD(u.fecha_reprog)+"."}
@@ -2485,8 +2505,11 @@ function historial(h){
   const ev=[];
   if(f) ev.push([f.fecha+"T00:00","Facturada · "+esc(f.via||"")]);
   es.forEach((e,k)=>{
-    ev.push([e.s_creado,"Salió en "+esc(e.s_vehiculo)+" con "+esc(e.s_chofer)+(es.length>1?" (intento "+(k+1)+")":"")+" · registró "+esc(e.s_creado_por||"")]);
-    if(e.registrado_fecha) ev.push([e.registrado_fecha,(e.resultado==="no_entregada"?"No entregada: "+esc(e.motivo):e.resultado==="parcial"?"Entregada parcial":"Entregada")+(e.contado&&e.resultado!=="no_entregada"?(e.pagada===false?" · no pagada":" · pagada"):"")+(e.comentario?' · "'+esc(e.comentario)+'"':"")+" · recibió "+esc(e.registrado_por||"")]);
+    ev.push([e.s_creado,"Salió en "+esc(e.s_vehiculo)+" con "+esc(e.s_chofer)+(es.length>1?" (intento "+(k+1)+")":"")+(e.s_porteo?" rumbo al almacén de porteo de Cancún":"")+" · registró "+esc(e.s_creado_por||"")]);
+    if(e.s_porteo&&e.s_pt_recibida_fecha) ev.push([e.s_pt_recibida_fecha,(e.pt_llego===false?'<span class="rojo">No llegó al almacén de Cancún</span>'+(e.pt_nota?' · “'+esc(e.pt_nota)+'”':""):"Llegó al almacén de Cancún")+" · recibió "+esc(e.s_pt_recibida_por||"")]);
+    if(e.s_porteo&&e.pt_reg) ev.push([e.pt_reg.creado,"Cancún la manda de regreso a Mérida en "+esc(e.pt_reg.folio)+" · "+esc(e.pt_reg.creado_por||"")+(e.pt_reg.comentario?' · “'+esc(e.pt_reg.comentario)+'”':"")]);
+    if(e.s_porteo&&e.pt_mer_fecha&&e.pt_llego!==false) ev.push([e.pt_mer_fecha,"Mérida recibió el reporte "+(e.pt_reg?esc(e.pt_reg.folio):"")+" · "+esc(e.pt_mer_por||"")+(e.pt_obs?' · <b>corrigió:</b> “'+esc(e.pt_obs)+'”':"")]);
+    if(e.registrado_fecha&&!(e.s_porteo&&e.pt_llego===false)) ev.push([e.registrado_fecha,(e.s_porteo?"Cancún: ":"")+(e.resultado==="no_entregada"?"No entregada: "+esc(e.motivo):e.resultado==="parcial"?"Entregada parcial":"Entregada")+(e.contado&&e.resultado!=="no_entregada"?(e.pagada===false?" · no pagada":" · pagada"):"")+(e.comentario?' · "'+esc(e.comentario)+'"':"")+" · recibió "+esc(e.registrado_por||"")]);
     if(e.decision_fecha) ev.push([e.decision_fecha,(e.decision==="reprogramar"?"Reprogramada al "+fD(e.fecha_reprog):"Entrega cancelada")+" · "+esc(e.decision_por||"")]);
   });
   for(const i of its){const n=i.destino==="cyc"?"Crédito":i.destino==="cartera"?"la cartera "+(i.cartera||""):"Archivo";
@@ -2501,6 +2524,128 @@ function historial(h){
     '<ul class="rtl">'+ev.map(([t,x])=>"<li><span>"+(String(t).length>10&&!String(t).endsWith("T00:00")?fH(t):fD(String(t).slice(0,10)))+"</span><span>"+x+"</span></li>").join("")+"</ul></div>";
 }
 
+
+
+/* ---------- Porteo Cancún: Alan recibe en Cancún, entrega, y manda reportes de regreso a Mérida ---------- */
+const ptPuede=()=>!!(PT&&PT.puede);
+const ptSal=()=>(PT&&PT.salidas)||[];
+const ptEnt=()=>ptSal().flatMap(s=>s.entregas.map(e=>Object.assign(e,{_s:s})));
+const ptRegPend=()=>((PT&&PT.regresos)||[]).filter(g=>!g.recibido_fecha);
+const ptEntDe=id=>ptEnt().find(e=>e.id===id);
+const ptEnCamino=()=>ptSal().filter(s=>s.estado==="en_ruta"&&!s.pt_recibida_fecha);
+const ptPorEntregar=()=>ptEnt().filter(e=>e.pt_llego&&!e.pt_regreso_id&&(!e.resultado||(e.resultado==="no_entregada"&&e.decision!=="cancelar")));
+const ptListas=()=>ptEnt().filter(e=>e.pt_llego&&!e.pt_regreso_id&&(e.resultado==="entregada"||e.resultado==="parcial"||(e.resultado==="no_entregada"&&e.decision==="cancelar")));
+const ptCuenta=()=>PT?ptEnCamino().length+ptPorEntregar().filter(e=>!e.resultado).length+(ptPuede()?ptListas().length:0):0;
+function ptPintarBadge(){const b=$("ebadge"); if(!b) return; const n=ptCuenta(); b.textContent=n; b.hidden=!n}
+const ptRes=e=>e.resultado==="entregada"?"Entregada":e.resultado==="parcial"?"Parcial":e.resultado==="no_entregada"?(e.decision==="cancelar"?"Cancelada":"No entregada"):"Sin marcar";
+function tarjRegreso(g,merida){
+  const es=g.ids.map(ptEntDe).filter(Boolean), ent=es.filter(e=>e.resultado!=="no_entregada").length;
+  return '<div class="rcard"><div class="top"><b>'+esc(g.folio)+"</b> · "+es.length+(es.length>1?" facturas":" factura")+'<span class="rtop"><span class="sub2">'+fH(g.creado)+"</span></span></div>"+
+    '<div class="sub2">Mandó '+esc(g.creado_por||"")+" · "+ent+" entregadas"+(es.length-ent?" · "+(es.length-ent)+" canceladas":"")+(g.comentario?' · “'+esc(g.comentario)+'”':"")+"</div>"+
+    (g.recibido_fecha?'<div class="sub2">Recibió en Mérida '+esc(g.recibido_por||"")+" "+fH(g.recibido_fecha)+(g.nota?' · “'+esc(g.nota)+'”':"")+"</div>"
+      :'<div class="acc">'+(merida&&PT.merida?'<button type="button" class="prim" data-a="ptabrirreg" data-g="'+g.id+'">Recibir reporte</button>':'<span class="sub2">En camino a Mérida</span>')+
+        (!merida&&ptPuede()?'<button type="button" class="rxb" data-a="ptcanreg" data-g="'+g.id+'">Cancelar reporte</button>':"")+"</div>")+"</div>";
+}
+function filaPT(e,modo){
+  const d=ptMarca.get(e.id)||{}, r=d.r||e.resultado||"", s=e._s;
+  const btn=(v,t)=>'<button type="button" data-a="ptres" data-e="'+e.id+'" data-r="'+v+'" aria-pressed="'+(r===v)+'"'+(ptPuede()?"":" disabled")+">"+t+"</button>";
+  let det="";
+  if(ptPuede()&&d.r){
+    if(r==="no_entregada") det='<div class="fila"><select data-a="ptmot" data-e="'+e.id+'" aria-label="Motivo"><option value="">Motivo…</option>'+PT.motivos.map(m=>"<option"+(m===(d.mot||"")?" selected":"")+">"+esc(m)+"</option>").join("")+"</select>"+
+      '<input type="text" class="busq" id="pt_c_'+e.id+'" placeholder="Comentario"></div>';
+    else det='<div class="fila">'+(e.contado===true?'<label class="rchk"><input type="checkbox" data-a="ptpag" data-e="'+e.id+'"'+(d.pag!==false?" checked":"")+"> Está pagada</label>":"")+
+      '<label class="rchk"><input type="checkbox" data-a="ptev" data-e="'+e.id+'"'+(d.ev!==false?" checked":"")+"> Trae evidencia firmada</label>"+
+      '<input type="text" class="busq" id="pt_c_'+e.id+'" placeholder="'+(e.contado===true&&d.pag===false?"Comentario (obligatorio: ¿por qué no está pagada?)":"Comentario")+'"></div>';
+    det+='<div class="acc"><button type="button" class="prim" data-a="ptguardar" data-e="'+e.id+'">Guardar</button><button type="button" class="link" data-a="ptdescartar" data-e="'+e.id+'">Descartar</button></div>';
+  }
+  const info=e.resultado?'<div class="sub2"><b>'+ptRes(e)+"</b>"+(e.motivo?" · "+esc(e.motivo):"")+(e.contado&&e.resultado!=="no_entregada"?(e.pagada===false?' · <b class="rojo">no pagada</b>':" · pagada"):"")+(e.comentario?' · “'+esc(e.comentario)+'”':"")+(e.decision_comentario?' · “'+esc(e.decision_comentario)+'”':"")+" · "+esc(e.registrado_por||"")+" "+fH(e.decision_fecha||e.registrado_fecha)+"</div>":"";
+  return '<div class="rcard'+(r?" r-"+r:"")+'">'+(modo==="lista"&&ptPuede()?'<label class="rchk" style="float:right"><input type="checkbox" data-a="ptsel" data-e="'+e.id+'"'+(ptSel.has(e.id)?" checked":"")+"> Mandar</label>":"")+
+    '<div class="top"><b>'+esc(e.folio)+" · "+esc(e.cliente||"")+"</b>"+pago(e)+'</div><div class="sub2">'+din(e.total)+" · "+esc(e.via||"")+" · salió de Mérida el "+fD(s.fecha)+" en "+esc(s.vehiculo)+"</div>"+info+
+    (modo!=="ver"&&ptPuede()?'<div class="seg rres3">'+btn("entregada","Entregada")+btn("parcial","Parcial")+btn("no_entregada","No entregada")+"</div>":"")+det+
+    (modo==="entregar"&&ptPuede()&&e.resultado==="no_entregada"&&!d.r?'<div class="fila"><input type="text" class="busq" id="pt_x_'+e.id+'" placeholder="Por qué se cancela"><button type="button" class="btn" data-a="ptcancelar" data-e="'+e.id+'">Cancelar entrega</button></div>':"")+"</div>";
+}
+function vPorteo(){
+  if(!PT) return '<div class="vacio">Cargando…</div>';
+  if(ptRecibir){const s=ptSal().find(x=>x.id===ptRecibir); if(!s||s.pt_recibida_fecha) ptRecibir=null; else{
+    const falt=s.entregas.filter(e=>ptMarca.get("ll_"+e.id)===false).length;
+    return '<section class="panel"><div class="ghead"><h2>Recibir en Cancún: '+esc(s.vehiculo)+" · "+esc(s.chofer)+'</h2><button type="button" class="link" data-a="ptvolver">Volver</button></div>'+
+      '<div class="sub2">Salió de Mérida el '+fD(s.fecha)+" con "+s.entregas.length+" facturas. Desmarca las que no llegaron.</div>"+
+      '<div class="rlista">'+s.entregas.map(e=>'<label class="rcard rchk" style="display:flex;gap:8px"><input type="checkbox" data-a="ptllego" data-e="'+e.id+'"'+(ptMarca.get("ll_"+e.id)===false?"":" checked")+'><span><b>'+esc(e.folio)+"</b> · "+esc(e.cliente||"")+" "+pago(e)+'<span class="sub2"> · '+esc(e.via||"")+" · "+din(e.total)+"</span></span></label>").join("")+"</div>"+
+      '<div class="fila"><input type="text" class="busq" id="pt_nota" placeholder="'+(falt?"¿Qué faltó? (obligatorio)":"Comentario (opcional)")+'"><button type="button" class="prim" data-a="ptconfrec" data-s="'+s.id+'">Confirmar recepción ('+(s.entregas.length-falt)+" de "+s.entregas.length+")</button></div>"+
+      (falt?'<p class="aviso">Las que no llegaron pasan a Mérida (No entregados) como “NO LLEGÓ A CANCÚN”.</p>':"")+"</section>"}}
+  const cam=ptEnCamino(), por=ptPorEntregar(), lis=ptListas(), regs=(PT.regresos||[]);
+  const porVia=l=>{const g=new Map(); for(const e of l){const k=e.via||"Sin vía"; if(!g.has(k)) g.set(k,[]); g.get(k).push(e)} return [...g].sort((a,b)=>a[0].localeCompare(b[0]))};
+  const nSel=lis.filter(e=>ptSel.has(e.id)).length, fuera=lis.filter(e=>!ptSel.has(e.id)&&e.resultado!=="no_entregada").length;
+  return (ptPuede()?"":'<p class="aviso">Vista de consulta: los pasos de Cancún los registra Alan Bermudes.</p>')+
+    '<section class="panel"><div class="ghead"><h2>1. En camino a Cancún ('+cam.length+")</h2></div>"+(cam.length?'<div class="rlista">'+cam.map(s=>'<div class="rcard"><div class="top"><b>'+esc(s.vehiculo)+" · "+esc(s.chofer)+'</b><span class="rtop"><span class="sub2">'+fD(s.fecha)+"</span></span></div>"+
+      '<div class="sub2">'+s.entregas.length+" facturas · registró "+esc(s.creado_por||"")+" "+fH(s.creado)+"</div>"+(ptPuede()?'<div class="acc"><button type="button" class="prim" data-a="ptrecibir" data-s="'+s.id+'">Recibir en Cancún</button></div>':"")+"</div>").join("")+"</div>":'<div class="vacio">No viene ninguna camioneta.</div>')+"</section>"+
+    '<section class="panel"><div class="ghead"><h2>2. Por entregar al cliente ('+por.length+")</h2></div>"+(por.length?porVia(por).map(([v,l])=>'<h3 class="rgh">'+esc(v)+" ("+l.length+")</h3>"+'<div class="rlista">'+l.map(e=>filaPT(e,"entregar")).join("")+"</div>").join(""):'<div class="vacio">Nada por entregar.</div>')+"</section>"+
+    '<section class="panel"><div class="ghead"><h2>3. Listas para mandar a Mérida ('+lis.length+")</h2></div>"+(lis.length?
+      (ptPuede()?'<div class="acc"><button type="button" class="link" data-a="ptselall">'+(nSel===lis.length?"Quitar selección":"Seleccionar todas")+"</button></div>":"")+
+      '<div class="rlista">'+lis.map(e=>filaPT(e,"lista")).join("")+"</div>"+
+      (ptPuede()?'<div class="rres"><span><b>'+nSel+"</b> seleccionadas</span>"+(fuera&&nSel?'<span class="rojo"><b>'+fuera+"</b> entregadas se quedan fuera: el comentario es obligatorio</span>":"")+"</div>"+
+        '<div class="fila"><input type="text" class="busq" id="pt_rcom" placeholder="'+(fuera&&nSel?"Comentario (obligatorio: ¿por qué se quedan las demás?)":"Comentario (opcional)")+'"><button type="button" class="prim" data-a="ptgenreg"'+(nSel?"":" disabled")+">Generar reporte de regreso ("+nSel+")</button></div>":"")
+      :'<div class="vacio">No hay facturas entregadas pendientes de mandar.</div>')+"</section>"+
+    '<section class="panel"><div class="ghead"><h2>4. Reportes de regreso a Mérida</h2></div>'+(regs.length?'<div class="rlista">'+regs.map(g=>tarjRegreso(g,false)).join("")+"</div>":'<div class="vacio">Todavía no hay reportes.</div>')+"</section>"+
+    '<p class="aviso">Solo entran al reporte las facturas entregadas, parciales o canceladas. Las no entregadas se siguen intentando aquí hasta entregarlas o cancelarlas.</p>';
+}
+function vPtRecibirMerida(){
+  const g=ptRegPend().find(x=>x.id===ptReg); if(!g){ptReg=null; return vRecibir()}
+  const es=g.ids.map(ptEntDe).filter(Boolean);
+  const fila=e=>{const c=ptCambio.get(e.id), r=c?c.r:e.resultado;
+    const btn=(v,t)=>'<button type="button" data-a="ptcres" data-e="'+e.id+'" data-r="'+v+'" aria-pressed="'+(r===v)+'">'+t+"</button>";
+    return '<div class="rcard r-'+r+'"><div class="top"><b>'+esc(e.folio)+" · "+esc(e.cliente||"")+"</b>"+pago(e)+'</div><div class="sub2">'+din(e.total)+" · "+esc(e.via||"")+"</div>"+
+      '<div class="sub2">Cancún: <b>'+ptRes(e)+"</b>"+(e.motivo?" · "+esc(e.motivo):"")+(e.contado&&e.resultado!=="no_entregada"?(e.pagada===false?' · <b class="rojo">no pagada</b>':" · pagada"):"")+(e.comentario?' · “'+esc(e.comentario)+'”':"")+(e.trae_evidencia===false?' · <b class="rojo">sin evidencia</b>':"")+"</div>"+
+      (c?'<div class="seg rres3">'+btn("entregada","Entregada")+btn("parcial","Parcial")+btn("no_entregada","No entregada")+"</div>"+
+        '<div class="fila">'+(r==="no_entregada"?'<select data-a="ptcmot" data-e="'+e.id+'"><option value="">Motivo…</option>'+PT.motivos.map(m=>"<option"+(m===(c.mot||"")?" selected":"")+">"+esc(m)+"</option>").join("")+"</select>":
+          (e.contado===true?'<label class="rchk"><input type="checkbox" data-a="ptcpag" data-e="'+e.id+'"'+(c.pag!==false?" checked":"")+"> Está pagada</label>":"")+'<label class="rchk"><input type="checkbox" data-a="ptcev" data-e="'+e.id+'"'+(c.ev!==false?" checked":"")+"> Trae evidencia</label>")+
+        '<input type="text" class="busq" id="pt_o_'+e.id+'" placeholder="Observación del cambio (obligatoria)"></div><div class="acc"><button type="button" class="link" data-a="ptcquitar" data-e="'+e.id+'">Dejar como lo puso Cancún</button></div>'
+      :'<div class="acc"><button type="button" class="btn" data-a="ptcorregir" data-e="'+e.id+'">Corregir</button></div>')+"</div>"};
+  return '<section class="panel"><div class="ghead"><h2>Recibir '+esc(g.folio)+" de Cancún</h2>"+'<button type="button" class="link" data-a="ptvolverreg">Volver</button></div>'+
+    '<div class="sub2">Mandó '+esc(g.creado_por||"")+" el "+fH(g.creado)+(g.comentario?' · “'+esc(g.comentario)+'”':"")+". Revisa los papeles; si algo no coincide, corrígelo con su observación.</div></section>"+
+    '<div class="rlista">'+es.map(fila).join("")+"</div>"+
+    '<section class="panel rcierre"><div class="fila"><input type="text" class="busq" id="pt_rnota" placeholder="Comentario de la recepción (opcional)"><button type="button" class="prim" data-a="ptrecreg" data-g="'+g.id+'">Recibir reporte ('+es.length+(ptCambio.size?" · "+ptCambio.size+" con cambios":"")+")</button></div></section>";
+}
+const ptTxt=id=>{const x=$(id); return x?x.value.trim():(NT[id]||"").trim()};
+async function accionPT(a,el){
+  const eid=el.dataset.e, sid=el.dataset.s, gid=el.dataset.g;
+  const recarga=async m=>{try{PT=await llamar("rp_pt_lista")}catch(e){} if(rol!=="porteo") try{await cargar()}catch(e){} if(m) aviso(m); if(rol==="porteo") ptPintarBadge(); pintar()};
+  try{
+    switch(a){
+      case"ptrecibir": ptRecibir=sid; ptMarca.clear(); pintar(); window.scrollTo({top:0}); return;
+      case"ptvolver": ptRecibir=null; pintar(); return;
+      case"ptllego": ptMarca.set("ll_"+eid,el.checked); pintar(); return;
+      case"ptconfrec": {const s=ptSal().find(x=>x.id===sid), ll=s.entregas.filter(e=>ptMarca.get("ll_"+e.id)!==false).map(e=>e.id);
+        const n=await llamar("rp_pt_recibir",{sal:sid,llegaron:ll,nota:ptTxt("pt_nota")}); ptRecibir=null; ptMarca.clear(); delete NT.pt_nota; return recarga("Recibidas en Cancún: "+n)}
+      case"ptres": {const e=ptEntDe(eid), d=ptMarca.get(eid)||{pag:e.pagada!==false,ev:e.trae_evidencia!==false,mot:e.motivo||""}; d.r=el.dataset.r; ptMarca.set(eid,d); pintar(); return}
+      case"ptmot": ptMarca.get(eid).mot=el.value; return;
+      case"ptpag": ptMarca.get(eid).pag=el.checked; pintar(); return;
+      case"ptev": ptMarca.get(eid).ev=el.checked; return;
+      case"ptdescartar": ptMarca.delete(eid); pintar(); return;
+      case"ptguardar": {const d=ptMarca.get(eid); el.disabled=true;
+        await llamar("rp_pt_registrar",{ent:eid,d:{resultado:d.r,motivo:d.mot,pagada:d.pag!==false,trae_evidencia:d.ev!==false,comentario:ptTxt("pt_c_"+eid)}});
+        ptMarca.delete(eid); delete NT["pt_c_"+eid]; return recarga("Guardado")}
+      case"ptcancelar": await llamar("rp_pt_cancelar",{ent:eid,coment:ptTxt("pt_x_"+eid)}); delete NT["pt_x_"+eid]; return recarga("Entrega cancelada");
+      case"ptsel": el.checked?ptSel.add(eid):ptSel.delete(eid); pintar(); return;
+      case"ptselall": {const l=ptListas(); if(l.every(e=>ptSel.has(e.id))) ptSel.clear(); else l.forEach(e=>ptSel.add(e.id)); pintar(); return}
+      case"ptgenreg": {const ids=ptListas().filter(e=>ptSel.has(e.id)).map(e=>e.id); el.disabled=true;
+        const f=await llamar("rp_pt_regreso_crear",{ids,comentario:ptTxt("pt_rcom")}); ptSel.clear(); delete NT.pt_rcom; return recarga("Reporte "+f+" generado: va de regreso a Mérida")}
+      case"ptcanreg": await llamar("rp_pt_regreso_cancelar",{reg:gid}); return recarga("Reporte cancelado");
+      case"ptabrirreg": ptReg=gid; ptCambio.clear(); vista="recibir"; pintar(); window.scrollTo({top:0}); return;
+      case"ptvolverreg": ptReg=null; ptCambio.clear(); pintar(); return;
+      case"ptcorregir": {const e=ptEntDe(eid); ptCambio.set(eid,{r:e.resultado,mot:e.motivo||"",pag:e.pagada!==false,ev:e.trae_evidencia!==false}); pintar(); return}
+      case"ptcquitar": ptCambio.delete(eid); pintar(); return;
+      case"ptcres": ptCambio.get(eid).r=el.dataset.r; pintar(); return;
+      case"ptcmot": ptCambio.get(eid).mot=el.value; return;
+      case"ptcpag": ptCambio.get(eid).pag=el.checked; return;
+      case"ptcev": ptCambio.get(eid).ev=el.checked; return;
+      case"ptrecreg": {const cambios=[...ptCambio].map(([id,c])=>({ent:id,resultado:c.r,motivo:c.mot,pagada:c.pag,trae_evidencia:c.ev,obs:ptTxt("pt_o_"+id)}));
+        if(cambios.some(c=>!c.obs)){aviso("Escribe la observación de cada factura que corregiste");return}
+        el.disabled=true; const n=await llamar("rp_pt_regreso_recibir",{reg:gid,cambios,nota:ptTxt("pt_rnota")});
+        ptReg=null; ptCambio.clear(); return recarga("Reporte recibido: "+n+" facturas pasan a Evidencias")}
+    }
+  }catch(err){aviso(err.message); el.disabled=false}
+}
 
 /* ---------- Carteras: Crédito reparte a cada responsable ---------- */
 const misCart=()=>(C&&C.mis_carteras)||[];
@@ -2593,10 +2738,11 @@ function enlazar(){
   });
   const nf=$("nfol"); if(nf) nf.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();agregarFolio(nf.value)}};
   const nv=$("nvia"); if(nv) nv.onchange=()=>{guardarForm();N.via=nv.value;pintar()};
-  box.querySelectorAll('[id^="rn_"],[id^="ru_"],[id^="kobs_"],[id^="kdobs_"],#relobs').forEach(x=>{if(NT[x.id]!=null) x.value=NT[x.id]; x.oninput=()=>{NT[x.id]=x.value}});
+  box.querySelectorAll('[id^="rn_"],[id^="ru_"],[id^="kobs_"],[id^="kdobs_"],#relobs,[id^="pt_"]').forEach(x=>{if(NT[x.id]!=null) x.value=NT[x.id]; x.oninput=()=>{NT[x.id]=x.value}});
 }
 async function accion(a,el){
   const sid=el.dataset.s, eid=el.dataset.e;
+  if(a.startsWith("pt")) return accionPT(a,el);
   try{
     switch(a){
       case"nueva": N.abierta=true; N.items=[]; N.fecha=HOY(); pintar();
@@ -2612,7 +2758,8 @@ async function accion(a,el){
         if(!N.veh||!N.cho){aviso("Elige el vehículo y el chofer");return}
         el.disabled=true;
         const id=await llamar("rp_crear_salida",{d:{fecha:N.fecha,vehiculo:N.veh,chofer:N.cho,folios:N.items.map(i=>i.folio)}});
-        N.abierta=false; N.items=[]; aviso("Salida registrada"); await cargar(); pintar(); const s=salida(id); if(s) hoja(s); return}
+        if(N.pt) try{await llamar("rp_pt_marcar",{sal:id,si:true})}catch(e){aviso("La salida se registró, pero no se pudo marcar como porteo: "+e.message)}
+        const pt=N.pt; N.abierta=false; N.items=[]; N.pt=null; aviso(pt?"Salida registrada · va al almacén de Cancún":"Salida registrada"); await cargar(); pintar(); const s=salida(id); if(s) hoja(s); return}
       case"hoja": return hoja(salida(sid));
       case"xsal": case"xent": case"xreab": case"xdec": case"xrel": case"xrelf": case"xconf": return correccion(a,el);
       case"cansal": if(!confirm("¿Cancelar esta salida? Las facturas vuelven a quedar por repartir.")) return;
