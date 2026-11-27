@@ -166,6 +166,8 @@ tfoot td:first-child{background:var(--surface-2)}
 #pDir .graf .mg{fill:var(--ink)} #pDir .graf .meta-l{stroke:var(--bad);stroke-dasharray:5 4;stroke-width:1.5}
 #pDir .dos{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 #pDir .dos>*{min-width:0}
+#pDir .thb{all:unset;cursor:pointer;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;white-space:nowrap}
+#pDir .thb:hover{color:var(--accent)}
 @media (max-width:900px){#pDir .dos{grid-template-columns:1fr}}
 #pDir h3{font-size:.95rem;margin:4px 0 8px}
 #pDir table{min-width:0}
@@ -3149,6 +3151,20 @@ function grafica(){
   return '<div class="graf">'+g+'</div><p class="nota">Millones de pesos sin IVA. Abajo de cada mes: margen bruto estimado. El mes actual (claro) va al '+D.corte.slice(8,10)+" "+MES[+D.corte.slice(5,7)-1]+".</p>";
 }
 
+// Tabla de resultados por mes; clic en "Ventas netas" muestra u oculta facturas y mostrador (se recuerda por navegador)
+function resultados(){
+  const box=$("dres"); if(!box) return;
+  let ab=false; try{ab=localStorage.getItem("dir_ventas_desg")==="1"}catch(e){}
+  const i=D.meses.length-1, gas=D.gas||[], hay=k=>gas[k]!=null;
+  const cab=["Mes","De la meta",'<button class="thb" id="dvbtn" title="Ver u ocultar facturas y mostrador">Ventas netas '+(ab?"▾":"▸")+"</button>"]
+    .concat(ab?["Facturas","Mostrador"]:[]).concat(["Costo est.","Utilidad bruta","Margen bruto","Gastos e impuestos","Utilidad neta","Margen neto","Compras","Cobrado"]);
+  const filas=[]; for(let k=i;k>=Math.max(0,i-12);k--){const v=D.v[k], ub=v-D.cos[k], un=hay(k)?ub-gas[k]:null;
+    filas.push([nm(D.meses[k]),pc(pct(v,D.meta)),din(v)].concat(ab?[din(D.vve[k]),din(D.vpv[k])]:[])
+      .concat([din(D.cos[k]),din(ub),pc(pct(ub,v)),hay(k)?din(gas[k]):"—",un==null?"—":din(un),un==null?"—":pc(pct(un,v)),din(D.comp[k]),din(D.cob[k])]))}
+  box.innerHTML=tabla(cab,filas);
+  $("dvbtn").onclick=()=>{try{localStorage.setItem("dir_ventas_desg",ab?"0":"1")}catch(e){} resultados()};
+}
+
 function pintar(){
   const box=$("pDir"), i=D.meses.length-1, v=D.v[i], cs=D.cos[i], [hb,ht]=D.hab, proy=hb?v/hb*ht:0;
   const ant=D.v[i-12], mg=pct(v-cs,v), mgp=pct(D.v[i-1]-D.cos[i-1],D.v[i-1]);
@@ -3167,10 +3183,8 @@ function pintar(){
     '<div class="cifra"><div class="k">Cobrado / Compras del mes</div><div class="m">'+din(D.cob[i])+'</div><div class="ref">compras '+din(D.comp[i])+" (sin IVA)</div></div>"+
     "</section>";
   // 2) Resultados
-  const filas=[]; for(let k=i;k>=Math.max(0,i-12);k--) filas.push([nm(D.meses[k]),din(D.v[k]),din(D.cos[k]),din(D.v[k]-D.cos[k]),pc(pct(D.v[k]-D.cos[k],D.v[k])),pc(pct(D.v[k],D.meta)),din(D.vve[k]),din(D.vpv[k]),din(D.comp[k]),din(D.cob[k])]);
-  h+=sec("Ventas y margen",grafica()+
-    tabla(["Mes","Ventas netas","Costo est.","Utilidad bruta","Margen","De la meta","Facturas","Mostrador","Compras","Cobrado"],filas)+
-    '<p class="nota">Costo de ventas <b>estimado</b> con el costo actual de cada artículo (existencias), así que en meses viejos el margen sale un poco más bajo de lo real. Gastos y utilidad neta: siguiente fase, con la contabilidad de Microsip.</p>',"dventas");
+  h+=sec("Ventas y margen",grafica()+'<div id="dres"></div>'+
+    '<p class="nota">Costo de ventas <b>estimado</b> con el costo actual de cada artículo (existencias), así que en meses viejos el margen sale un poco más bajo de lo real. Da clic en <b>Ventas netas</b> para ver facturas y mostrador. Gastos e impuestos, utilidad neta y margen neto: con la contabilidad de Microsip (en cuanto llegue a los datos de cada noche).</p>',"dventas");
   // 3) Ventas: vendedores, grupos, clientes
   const vt=D.vendedores.reduce((a,r)=>a+r[1],0), vtp=D.vendedores.reduce((a,r)=>a+r[3],0);
   h+=sec("Ventas de "+mesN+" por vendedor y por grupo",'<div class="dos"><div><h3>Vendedores</h3>'+
@@ -3194,7 +3208,7 @@ function pintar(){
     '</div><div><h3>Por pagar: vencimientos</h3>'+barras(semL.map((t,j)=>[t,cxp.sem[j]]),r=>r[0]==="Vencido")+
     '<h3 style="margin-top:14px">Proveedores con más saldo</h3>'+tabla(["Proveedor","Saldo","Vencido"],cxp.top.map(r=>[esc(r[0]),din(r[1]),r[2]?din(r[2]):"—"]))+"</div></div>"+
     (cxp.ppago.length?"<h3 style=\"margin-top:14px\">Descuentos por pronto pago vigentes</h3>"+tabla(["Proveedor","Factura","Saldo","Pagar antes del","Descuento","Ahorro"],cxp.ppago.map(r=>[esc(r[0]),esc(r[1]),din(r[2]),(+r[3].slice(8,10))+" "+MES[+r[3].slice(5,7)-1],pc(r[4]),din(r[5])])):""),"ddin");
-  box.innerHTML=h;
+  box.innerHTML=h; resultados();
 }
 async function cargar(){
   if(window.FUENTE&&window.FUENTE.direccion) D=await window.FUENTE.direccion();
